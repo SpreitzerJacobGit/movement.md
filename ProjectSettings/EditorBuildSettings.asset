@@ -6,8 +6,17 @@ EditorBuildSettings:
   serializedVersion: 2
   m_Scenes:
   - enabled: 1
-    path: Assets/Scenes/SampleScene.unity
-    guid: 99c9720ab356a0642a771bea13969a05
+    path: Assets/Scenes/Boot.unity
+    guid: 26f89ff7d4bb7f94187c975919ead19a
+  - enabled: 1
+    path: Assets/Scenes/Match.unity
+    guid: 7b64a37241a8d264bbaeb4896ba0b3ca
+  - enabled: 1
+    path: Assets/Scenes/Sandbox.unity
+    guid: 8be35a60b20619e42ad03dfd47debe1f
+  - enabled: 1
+    path: Assets/Scenes/Training.unity
+    guid: 73a0dd49eb0f4a142b25678179f27c00
   m_configObjects:
     com.unity.input.settings.actions: {fileID: -944628639613478452, guid: 052faaac586de48259a63d0c4782560b, type: 3}
   m_UseUCBPForAssetBundles: 0

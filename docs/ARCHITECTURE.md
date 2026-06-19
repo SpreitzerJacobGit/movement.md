@@ -43,6 +43,12 @@ All components are count-agnostic systems operating over an entity set of `N` mo
 | **Presentation layer** | Perfect-information rendering: through-wall position light, look cone, spin meter, playback tell. Read-only over sim state. |
 | **Macro system** | Between-round geometry edit + shared ability pool; identical per-round start state; geometry persists within a match, resets per match. |
 | **Netcode** | Input-only transport, remote-input prediction, rollback re-simulation, server-authoritative reconciliation. |
+| **App flow** (`_Project/Core`) | Host-layer mode state machine + additive scene orchestration (Boot → Singles/Doubles/Sandbox/Training). Count-agnostic: Singles & Doubles share one Match scene at different N. |
+| **Presentation settings** (`_Project/Presentation`) | `OverlaySettings` — perfect-info overlay flags (position light, look cone, spin meter, playback tell). Read-only by the renderer; never feeds sim state. |
+| **Dev tooling** (`_Project/Dev`, `_Project/UI/DevMenu`) | F1 Developer Menu + `IDevTool` registry; tools route through the `ISimContext` boundary so they compile before Quantum is installed. |
+| **Match flow** (`_Project/Core/Match`) | `MatchController` + `MatchState`: count-agnostic (per-side) first-to-11 / best-of-3 lifecycle with mid-game (at 6) and between-game edit windows. Core-only; UI subscribes to its events. |
+| **Macro / place-geometry** (`_Project/Core/Macro`, `_Project/UI/Macro`) | `MacroState` holds placed geometry (persists the whole match, resets per match); the place UI does free-3D mouse placement, one piece per side per edit window. Both sides' pieces are visible (perfect info). |
+| **Settings** (`_Project/UI/Settings`) | Display + Audio settings, persisted via PlayerPrefs. |
 
 ## Key decisions
 
@@ -111,6 +117,26 @@ direct support 2026-03-31; Hathora shut down 2026-05-05 — do not lock a provid
    forward with corrected inputs. Re-sim must be bit-identical.
 5. The server (when present) runs the same sim as authority; clients reconcile to it.
 6. The presentation layer renders sim state read-only — no gameplay state lives in the renderer.
+
+## App flow & UI (host/renderer layer — groundwork)
+
+The Unity host now carries a **shell** (no sim yet) so the UI and dev tooling are in place before
+the sim systems are built. See [`Assets/_Project/README.md`](../Assets/_Project/README.md).
+
+- **Entry flow:** traditional funnel for now — Boot → Main Menu → mode select (Singles / Doubles /
+  Sandbox / Training). The brief's "sandbox-as-hub that morphs into a match" (§1.4) is a later
+  polish goal, not this shell.
+- **Scene topology:** one always-loaded Boot scene; each mode loads **additively** and swaps out.
+  Boot holds `AppFlow`, the menus, the HUD, and the dev tooling.
+- **UI tech (hybrid):** UI Toolkit for the Main Menu + Developer menu; uGUI Canvas for the thin
+  in-match HUD. Perfect-info rendering will be world-space meshes reading `OverlaySettings`.
+- **Count-agnosticism holds in the UI:** modes are defined by a player-count config, not
+  `player1`/`player2`. Singles and Doubles run the same Match scene at N=2 / N=4.
+- **Sim boundary:** `SimHost.Current` (`ISimContext`) defaults to `NullSimContext`, which fails fast
+  with a clear pending status. Photon Quantum installs the real context via `SimHost.Set(...)` later;
+  dev tools then come online with no UI changes.
+- **Tunables** are float proxies for feel-tuning/presentation only — the sim consumes fixed-point;
+  conversion happens at the sim boundary, never inside the step.
 
 ## External dependencies
 
