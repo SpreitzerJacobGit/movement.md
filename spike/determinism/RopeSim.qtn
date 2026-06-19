@@ -1,0 +1,47 @@
+// Quantum component mapping for the rope solver (sketch — port target for the First Test).
+//
+// This .qtn DSL file shows how RopeSolver.cs maps onto Photon Quantum's ECS. When Unity +
+// Quantum 3.0.x are installed, this is the starting point: define these components, then port
+// the body of RopeSolver.Step into a Quantum SystemMainThread, swapping Fixed/FixedVec3 for the
+// engine's FP/FPVector3. The ALGORITHM does not change; only the storage and math types do.
+//
+// CONFIRM-IN-QUANTUM: exact QList/array-in-component syntax and capacity rules against the
+// installed SDK version — Quantum's collection support has shifted across 3.0.x point releases.
+
+// One rope = one entity. Nodes live in a fixed-capacity list on the component.
+component Rope
+{
+    int Id;                 // stable id => drives ID-sorted collision-pair resolution (brief §4.3)
+    list<RopeNode> Nodes;   // CONFIRM: Quantum list capacity is set in the DSL / frame config
+}
+
+struct RopeNode
+{
+    FPVector3 Pos;
+    FPVector3 Vel;
+    FP        InvMass;      // 0 == pinned anchor
+    FPVector3 Force;        // per-tick accumulator; zeroed inside Integrate => zero at frame boundaries.
+                            // (Replaces the managed force buffer the local spike used; keeps all sim
+                            //  state on the deterministic frame heap.)
+}
+
+// Solver tuning, kept on a singleton so it is part of deterministic frame state (not a MonoBehaviour).
+singleton component RopeSolverConfig
+{
+    FP SpringK;
+    FP Damping;
+    FP SegmentRest;
+    FP Gravity;
+    FP CollisionDist;
+    FP CollisionK;
+    // Dt comes from the Quantum session config (DeltaTime), locked to 128 Hz — see README.
+}
+
+// System ordering (declare in SystemSetup): a single RopeSolverSystem : SystemMainThread that,
+// each Update(Frame f):
+//   1. clears a per-node force buffer
+//   2. accumulates gravity + structural springs from FROZEN positions
+//   3. builds rope-rope pairs, SORTS BY Rope.Id, resolves penalty collisions
+//   4. integrates (semi-implicit Euler) at f.DeltaTime
+// i.e. a line-for-line port of RopeSolver.Step. Keep the system count-agnostic: iterate
+// f.Filter<Rope>(), never a fixed two-rope assumption.

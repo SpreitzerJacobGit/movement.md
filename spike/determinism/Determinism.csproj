@@ -1,0 +1,25 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <!--
+    Local de-risk harness for the First Test. Runs Aspects 1-3 and 5 with ONLY the .NET SDK,
+    before Unity/Quantum is installed. Int128 (used by the Q32.32 fixed-point) requires .NET 7+;
+    this targets the .NET 8 LTS.  Run:  dotnet run -c Release
+  -->
+  <PropertyGroup>
+    <OutputType>Exe</OutputType>
+    <TargetFramework>net8.0</TargetFramework>
+    <LangVersion>latest</LangVersion>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>disable</ImplicitUsings>
+    <StartupObject>Determinism.DeterminismHarness</StartupObject>
+    <Optimize>true</Optimize>
+  </PropertyGroup>
+
+  <!-- Quantum Stage-2 port files live in this folder but compile only inside Unity+Quantum
+       (they reference Photon.Deterministic / Quantum). Exclude them from the local de-risk build. -->
+  <ItemGroup>
+    <Compile Remove="RopeSolverSystem.cs" />
+    <Compile Remove="RopeSpawnSystem.cs" />
+  </ItemGroup>
+
+</Project>

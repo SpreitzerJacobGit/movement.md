@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(git status)",
+      "Bash(git diff*)",
+      "Bash(git log*)",
+      "Bash(git stash*)"
+    ],
+    "deny": []
+  },
+  "hooks": {
+    "Stop": [],
+    "PreToolUse": [],
+    "PostToolUse": [],
+    "Notification": []
+  },
+  "env": {}
+}
