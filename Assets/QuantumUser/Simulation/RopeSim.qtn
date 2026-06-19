@@ -1,0 +1,43 @@
+// Quantum component mapping for the rope solver (the First Test subject, Stage 2).
+//
+// Validated against Photon Quantum 3.0.11 (DSL syntax + codegen). Defines the ECS state the
+// rope solver operates on; RopeSolver.Step (local spike) is ported onto these in RopeSolverSystem.cs
+// using FP / FPVector3. The ALGORITHM is unchanged from the proven local spike; only storage and
+// math types differ.
+
+// One rope = one entity. Nodes live in a list on the component (capacity set at AllocateList time).
+component Rope
+{
+    int Id;                 // stable id => drives ID-sorted collision-pair resolution (brief §4.3)
+    list<RopeNode> Nodes;
+}
+
+struct RopeNode
+{
+    FPVector3 Pos;
+    FPVector3 Vel;
+    FP        InvMass;      // 0 == pinned anchor
+    FPVector3 Force;        // per-tick accumulator; zeroed inside Integrate => zero at frame boundaries.
+                            // (Keeps all sim state on the deterministic frame heap.)
+}
+
+// Solver tuning, kept on a singleton so it is part of deterministic frame state (not a MonoBehaviour).
+singleton component RopeSolverConfig
+{
+    FP SpringK;
+    FP Damping;
+    FP SegmentRest;
+    FP Gravity;
+    FP CollisionDist;
+    FP CollisionK;
+    // Dt comes from the Quantum session config (DeltaTime), locked to 128 Hz via SessionConfig.UpdateFPS.
+}
+
+// System ordering (registered in SystemSetup.User.cs): RopeSpawnSystem (OnInit) creates the scene,
+// then RopeSolverSystem (Update) each tick:
+//   1. clears a per-node force buffer
+//   2. accumulates gravity + structural springs from FROZEN positions
+//   3. builds rope-rope pairs, SORTS BY Rope.Id, resolves penalty collisions
+//   4. integrates (semi-implicit Euler) at f.DeltaTime
+// i.e. a line-for-line port of RopeSolver.Step. Count-agnostic: iterates f.Filter<Rope>(), never a
+// fixed rope count.
