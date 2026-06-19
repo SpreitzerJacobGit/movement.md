@@ -50,12 +50,105 @@ namespace Quantum.Prototypes {
   #endif //;
   
   [System.SerializableAttribute()]
+  [Quantum.Prototypes.Prototype(typeof(Quantum.Anchor))]
+  public unsafe partial class AnchorPrototype : ComponentPrototype<Quantum.Anchor> {
+    public Int32 Id;
+    partial void MaterializeUser(Frame frame, ref Quantum.Anchor result, in PrototypeMaterializationContext context);
+    public override Boolean AddToEntity(FrameBase f, EntityRef entity, in PrototypeMaterializationContext context) {
+        Quantum.Anchor component = default;
+        Materialize((Frame)f, ref component, in context);
+        return f.Set(entity, component) == SetResult.ComponentAdded;
+    }
+    public void Materialize(Frame frame, ref Quantum.Anchor result, in PrototypeMaterializationContext context = default) {
+        result.Id = this.Id;
+        MaterializeUser(frame, ref result, in context);
+    }
+  }
+  [System.SerializableAttribute()]
   [Quantum.Prototypes.Prototype(typeof(Quantum.Input))]
   public unsafe partial class InputPrototype : StructPrototype {
-    [HideInInspector()]
-    public Int32 _empty_prototype_dummy_field_;
+    public FPVector2 Move;
+    public FPVector2 Look;
+    public FP Jump;
+    public FP Grapple;
     partial void MaterializeUser(Frame frame, ref Quantum.Input result, in PrototypeMaterializationContext context);
     public void Materialize(Frame frame, ref Quantum.Input result, in PrototypeMaterializationContext context = default) {
+        result.Move = this.Move;
+        result.Look = this.Look;
+        result.Jump = this.Jump;
+        result.Grapple = this.Grapple;
+        MaterializeUser(frame, ref result, in context);
+    }
+  }
+  [System.SerializableAttribute()]
+  [Quantum.Prototypes.Prototype(typeof(Quantum.MovementConfig))]
+  public unsafe partial class MovementConfigPrototype : ComponentPrototype<Quantum.MovementConfig> {
+    public FP Gravity;
+    public FP MaxSpeed;
+    public FP GroundAccel;
+    public FP AirAccel;
+    public FP GroundFriction;
+    public FP JumpBase;
+    public FP JumpSinkScale;
+    public FP SinkDecaySeconds;
+    public FP SinkGain;
+    public FP LookYawRate;
+    public FP LookPitchRate;
+    public FP PitchMin;
+    public FP PitchMax;
+    partial void MaterializeUser(Frame frame, ref Quantum.MovementConfig result, in PrototypeMaterializationContext context);
+    public override Boolean AddToEntity(FrameBase f, EntityRef entity, in PrototypeMaterializationContext context) {
+        Quantum.MovementConfig component = default;
+        Materialize((Frame)f, ref component, in context);
+        return f.Set(entity, component) == SetResult.ComponentAdded;
+    }
+    public void Materialize(Frame frame, ref Quantum.MovementConfig result, in PrototypeMaterializationContext context = default) {
+        result.Gravity = this.Gravity;
+        result.MaxSpeed = this.MaxSpeed;
+        result.GroundAccel = this.GroundAccel;
+        result.AirAccel = this.AirAccel;
+        result.GroundFriction = this.GroundFriction;
+        result.JumpBase = this.JumpBase;
+        result.JumpSinkScale = this.JumpSinkScale;
+        result.SinkDecaySeconds = this.SinkDecaySeconds;
+        result.SinkGain = this.SinkGain;
+        result.LookYawRate = this.LookYawRate;
+        result.LookPitchRate = this.LookPitchRate;
+        result.PitchMin = this.PitchMin;
+        result.PitchMax = this.PitchMax;
+        MaterializeUser(frame, ref result, in context);
+    }
+  }
+  [System.SerializableAttribute()]
+  [Quantum.Prototypes.Prototype(typeof(Quantum.Mover))]
+  public unsafe partial class MoverPrototype : ComponentPrototype<Quantum.Mover> {
+    public Int32 PlayerIndex;
+    public FPVector3 Velocity;
+    public FP Yaw;
+    public FP Pitch;
+    public FP Grounded;
+    public FP PrevJump;
+    public FP GrappleHeld;
+    public FP GrappleActive;
+    public FPVector3 GrappleAnchorPos;
+    public FP Sink;
+    partial void MaterializeUser(Frame frame, ref Quantum.Mover result, in PrototypeMaterializationContext context);
+    public override Boolean AddToEntity(FrameBase f, EntityRef entity, in PrototypeMaterializationContext context) {
+        Quantum.Mover component = default;
+        Materialize((Frame)f, ref component, in context);
+        return f.Set(entity, component) == SetResult.ComponentAdded;
+    }
+    public void Materialize(Frame frame, ref Quantum.Mover result, in PrototypeMaterializationContext context = default) {
+        result.PlayerIndex = this.PlayerIndex;
+        result.Velocity = this.Velocity;
+        result.Yaw = this.Yaw;
+        result.Pitch = this.Pitch;
+        result.Grounded = this.Grounded;
+        result.PrevJump = this.PrevJump;
+        result.GrappleHeld = this.GrappleHeld;
+        result.GrappleActive = this.GrappleActive;
+        result.GrappleAnchorPos = this.GrappleAnchorPos;
+        result.Sink = this.Sink;
         MaterializeUser(frame, ref result, in context);
     }
   }
@@ -65,6 +158,9 @@ namespace Quantum.Prototypes {
     public Int32 Id;
     [DynamicCollectionAttribute()]
     public Quantum.Prototypes.RopeNodePrototype[] Nodes = {};
+    public Int32 AttachedPlayer;
+    public FPVector3 PlayerForce;
+    public FP SegmentRest;
     partial void MaterializeUser(Frame frame, ref Quantum.Rope result, in PrototypeMaterializationContext context);
     public override Boolean AddToEntity(FrameBase f, EntityRef entity, in PrototypeMaterializationContext context) {
         Quantum.Rope component = default;
@@ -83,6 +179,9 @@ namespace Quantum.Prototypes {
             list.Add(tmp);
           }
         }
+        result.AttachedPlayer = this.AttachedPlayer;
+        result.PlayerForce = this.PlayerForce;
+        result.SegmentRest = this.SegmentRest;
         MaterializeUser(frame, ref result, in context);
     }
   }

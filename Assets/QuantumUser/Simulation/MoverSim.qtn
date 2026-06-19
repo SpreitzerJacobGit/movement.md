@@ -1,0 +1,59 @@
+// Count-agnostic mover (player) entity + movement tuning — movement.md §5.1.
+//
+// The foundation of the build sequence: the count-agnostic player entity that Movement / Grapple /
+// Spin / Offense systems iterate via f.Filter<Mover>() — never player1/player2 (CONVENTIONS,
+// Decision 3). Position lives on Quantum's built-in Transform3D (deterministic; used by the Option-C
+// physics queries for ground/wall/world collision). The Mover component carries velocity + look +
+// ground state, all integrated manually in fixed-point (same paradigm as the rope solver — no
+// Quantum PhysicsBody).
+//
+// Validated against Photon Quantum 3.0.11 DSL (mirrors RopeSim.qtn's proven syntax).
+
+component Mover
+{
+    int       PlayerIndex;   // which player's polled input drives this mover (count-agnostic link, NOT player1/2)
+    FPVector3 Velocity;      // per-tick velocity; integrated manually each tick (Option C: no rigidbody)
+    FP        Yaw;           // look yaw (around Y), radians
+    FP        Pitch;         // look pitch (around X), radians; clamped to [PitchMin, PitchMax]
+    FP        Grounded;      // 0 = airborne, 1 = grounded (set by the collision pass; v1 leaves it 0)
+    FP        PrevJump;      // previous-tick jump input (0/1) for rising-edge detection
+    FP        GrappleHeld;   // previous-tick grapple input (0/1) for rising/falling-edge detection
+    FP        GrappleActive; // 1 while a grapple rope is attached this tick
+    FPVector3 GrappleAnchorPos; // world pos of the anchor this mover is grappled to (view/sandbox state)
+    FP        Sink;             // momentum sink: built by hard/fast landings, decays over time, scales jumps
+}
+
+// Movement tuning on a singleton so it is part of deterministic frame state (not a MonoBehaviour),
+// matching the RopeSolverConfig pattern. Values are deterministic integer-derived placeholders for
+// v1 (never FP.FromFloat — non-deterministic). Author the real curve in a MovementConfig asset once
+// movement feel is tuned.
+singleton component MovementConfig
+{
+    FP Gravity;
+    FP MaxSpeed;        // horizontal speed cap
+    FP GroundAccel;     // accel toward desired horizontal dir while grounded
+    FP AirAccel;        // accel while airborne (air control; typically < GroundAccel)
+    FP GroundFriction;  // decel when no horizontal input and grounded
+    FP JumpBase;        // weak base jump impulse (applied even with no sink)
+    FP JumpSinkScale;   // extra jump impulse per unit of sink (sink fuels bigger jumps)
+    FP SinkDecaySeconds; // N — sink decays to ~0 over this many seconds
+    FP SinkGain;        // sink gained per unit of impact speed on landing
+    FP LookYawRate;     // yaw delta per tick per unit Look.x
+    FP LookPitchRate;   // pitch delta per tick per unit Look.y
+    FP PitchMin;        // pitch clamp lower bound
+    FP PitchMax;        // pitch clamp upper bound
+    // Dt comes from the Quantum session (DeltaTime, locked to 128 Hz via SessionConfig.UpdateFPS).
+}
+
+// Polled per-tick player input. The Unity side (MoverInputPoller) fills this from keyboard/mouse via
+// CallbackPollInput; the sim reads it via the code-generated f.GetPlayerInput(PlayerRef). This is the
+// ONLY float entry point into the sim (FP.FromFloat_UNSAFE lives in the poller, never inside the step).
+//   Move.X = strafe, Move.Y = forward/back; Look.X/Y = mouse-delta look; Jump = 1 held / 0 released
+// (rising edge detected in MovementSystem via Mover.PrevJump).
+input
+{
+    FPVector2 Move;
+    FPVector2 Look;
+    FP        Jump;
+    FP        Grapple;       // 1 held / 0 released. HOOK: wire the in-progress button (other branch) -> here.
+}

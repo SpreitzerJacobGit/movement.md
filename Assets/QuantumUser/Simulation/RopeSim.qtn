@@ -8,8 +8,17 @@
 // One rope = one entity. Nodes live in a list on the component (capacity set at AllocateList time).
 component Rope
 {
-    int Id;                 // stable id => drives ID-sorted collision-pair resolution (brief §4.3)
+    int       Id;                 // stable id => drives ID-sorted collision-pair resolution (brief §4.3)
     list<RopeNode> Nodes;
+    int       AttachedPlayer;     // player index this rope is grappled to (-1 = none / free rope)
+    FPVector3 PlayerForce;        // chain force on the player-end node, stashed by the solver for MovementSystem
+    FP        SegmentRest;        // per-rope rest length (grapple ropes set this to span/(nodes-1))
+}
+
+// Grapple anchor point. Position lives on Transform3D. Players grapple to the nearest one overhead.
+component Anchor
+{
+    int Id;   // stable anchor id (kept non-empty so Quantum codegen accepts the component)
 }
 
 struct RopeNode

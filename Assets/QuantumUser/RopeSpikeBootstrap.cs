@@ -18,6 +18,12 @@ namespace Quantum
         {
             Debug.Log("[RopeSpike] Bootstrap.Start() reached");
 
+            // §5: attach the mover input poller + debug view so Play gives WASD/mouse/Space input and a
+            // visible floor/camera/mover-cube automatically (no editor setup).
+            if (GetComponent<MoverInputPoller>() == null) gameObject.AddComponent<MoverInputPoller>();
+            if (GetComponent<MoverDebugView>() == null) gameObject.AddComponent<MoverDebugView>();
+            if (GetComponent<SandboxTuner>() == null) gameObject.AddComponent<SandboxTuner>();
+
             var mapdata = FindAnyObjectByType<QuantumMapData>();
             if (mapdata == null)
             {
@@ -84,7 +90,16 @@ namespace Quantum
             if (_probeTimer < 1f) return;
             _probeTimer = 0f;
             int ropes = f.ComponentCount<Rope>(false);
-            Debug.Log($"[RopeSpike] verified frame {f.Number}: Rope component count = {ropes}");
+            int movers = f.ComponentCount<Mover>(false);
+            string info = "";
+            var it = f.Filter<Mover>();
+            while (it.Next(out EntityRef e, out Mover mv))
+            {
+                // prevJump/grappleHeld echo last tick's inputs; grounded/sink show movement state.
+                info = $" | grounded={mv.Grounded} sink={mv.Sink} prevJump={mv.PrevJump} grappleHeld={mv.GrappleHeld} vel={mv.Velocity}";
+                break;
+            }
+            Debug.Log($"[RopeSpike] frame {f.Number}: ropes={ropes} movers={movers}{info}");
         }
     }
 }
