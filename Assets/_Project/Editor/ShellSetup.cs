@@ -1,9 +1,15 @@
 #if UNITY_EDITOR
 using MovementMD.Core;
+using MovementMD.Core.Macro;
+using MovementMD.Core.Match;
 using MovementMD.Dev;
+using MovementMD.Presentation;
 using MovementMD.UI.DevMenu;
 using MovementMD.UI.HUD;
+using MovementMD.UI.Macro;
 using MovementMD.UI.MainMenu;
+using MovementMD.UI.Match;
+using MovementMD.UI.Settings;
 using UnityEditor;
 using UnityEditor.SceneManagement;
 using UnityEngine;
@@ -32,6 +38,7 @@ namespace MovementMD.Editor
 
         private const string PanelPath = "Assets/_Project/Settings/UIPanelSettings.asset";
         private const string TunablesPath = "Assets/_Project/Dev/Tunables.asset";
+        private const string PalettePath = "Assets/_Project/Dev/GeometryPalette.asset";
 
         [MenuItem(MenuRoot, priority = 0)]
         public static void Run()
@@ -42,11 +49,24 @@ namespace MovementMD.Editor
 
             var panel = GetOrCreateAsset<PanelSettings>(PanelPath);
             var tunables = GetOrCreateAsset<Tunables>(TunablesPath);
+            var palette = GetOrCreateAsset<GeometryPalette>(PalettePath);
+
+            // Force-import the new assets so their GUIDs are registered before the Boot scene
+            // references them. Without this, the scene saves asset refs as null (fileID 0) — which
+            // is why UIDocument.panelSettings ends up empty and the screen renders black at runtime.
+            AssetDatabase.SaveAssets();
+            AssetDatabase.ImportAsset(PanelPath, ImportAssetOptions.ForceSynchronousImport);
+            AssetDatabase.ImportAsset(TunablesPath, ImportAssetOptions.ForceSynchronousImport);
+            AssetDatabase.ImportAsset(PalettePath, ImportAssetOptions.ForceSynchronousImport);
+            panel = AssetDatabase.LoadAssetAtPath<PanelSettings>(PanelPath);
+            tunables = AssetDatabase.LoadAssetAtPath<Tunables>(TunablesPath);
+            palette = AssetDatabase.LoadAssetAtPath<GeometryPalette>(PalettePath);
+            if (panel == null) Debug.LogError("[ShellSetup] PanelSettings failed to load after import — UIDocuments will render black.");
 
             CreatePlaceholderScene(MatchPath, new Color(0.18f, 0.20f, 0.24f), "Match (count-agnostic: 1v1 / 2v2)");
             CreatePlaceholderScene(SandboxPath, new Color(0.14f, 0.22f, 0.18f), "Sandbox");
             CreatePlaceholderScene(TrainingPath, new Color(0.22f, 0.18f, 0.14f), "Training");
-            CreateBootScene(panel, tunables);
+            CreateBootScene(panel, tunables, palette);
 
             EditorBuildSettings.scenes = new[]
             {
@@ -63,7 +83,7 @@ namespace MovementMD.Editor
 
         // ---- scenes -----------------------------------------------------------------------
 
-        private static void CreateBootScene(PanelSettings panel, Tunables tunables)
+        private static void CreateBootScene(PanelSettings panel, Tunables tunables, GeometryPalette palette)
         {
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
@@ -83,12 +103,12 @@ namespace MovementMD.Editor
 
             var menuGo = new GameObject("[MainMenu]");
             var menuDoc = menuGo.AddComponent<UIDocument>();
-            menuDoc.panelSettings = panel;
+            AssignSerialized(menuDoc, "m_PanelSettings", panel);
             menuGo.AddComponent<MainMenuController>();
 
             var devGo = new GameObject("[DevMenu]");
             var devDoc = devGo.AddComponent<UIDocument>();
-            devDoc.panelSettings = panel;
+            AssignSerialized(devDoc, "m_PanelSettings", panel);
             devGo.AddComponent<DevMenuController>();
 
             var toolsGo = new GameObject("[DevTools]");
@@ -99,8 +119,31 @@ namespace MovementMD.Editor
             toolsGo.AddComponent<SpawnDummyTool>();
             toolsGo.AddComponent<OverlayToggleTool>();
             toolsGo.AddComponent<InputRecordReplayTool>();
+            toolsGo.AddComponent<MatchScoringTool>();
 
             BuildHud();
+
+            // Match flow + scoreboard + place-geometry edit UI + placed-geometry renderer.
+            var matchGo = new GameObject("[Match]");
+            matchGo.AddComponent<MatchController>();
+
+            var scoreboardGo = new GameObject("[Scoreboard]");
+            var scoreboardDoc = scoreboardGo.AddComponent<UIDocument>();
+            AssignSerialized(scoreboardDoc, "m_PanelSettings", panel);
+            scoreboardGo.AddComponent<ScoreboardController>();
+
+            var placeGo = new GameObject("[PlaceGeometry]");
+            var placeDoc = placeGo.AddComponent<UIDocument>();
+            AssignSerialized(placeDoc, "m_PanelSettings", panel);
+            AssignSerialized(placeGo.AddComponent<PlaceGeometryController>(), "palette", palette);
+
+            var macroRenderGo = new GameObject("[PlacedGeometryRenderer]");
+            AssignSerialized(macroRenderGo.AddComponent<PlacedGeometryRenderer>(), "palette", palette);
+
+            var settingsGo = new GameObject("[Settings]");
+            var settingsDoc = settingsGo.AddComponent<UIDocument>();
+            AssignSerialized(settingsDoc, "m_PanelSettings", panel);
+            settingsGo.AddComponent<SettingsController>();
 
             EditorSceneManager.MarkSceneDirty(scene);
             EditorSceneManager.SaveScene(scene, BootPath);
@@ -138,6 +181,7 @@ namespace MovementMD.Editor
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
             var camGo = new GameObject("Main Camera");
+            camGo.tag = "MainCamera"; // so Camera.main resolves for place-geometry raycasts in-match
             var cam = camGo.AddComponent<Camera>();
             cam.clearFlags = CameraClearFlags.SolidColor;
             cam.backgroundColor = new Color(0.05f, 0.06f, 0.08f);
@@ -191,7 +235,10 @@ namespace MovementMD.Editor
                 return;
             }
             prop.objectReferenceValue = value;
-            so.ApplyModifiedPropertiesWithoutUndo();
+            // ApplyModifiedProperties (not WithoutUndo) reliably flushes asset references into the
+            // serialized scene; WithoutUndo was dropping them (saved as fileID 0 → black screen).
+            so.ApplyModifiedProperties();
+            EditorUtility.SetDirty(component);
         }
     }
 }

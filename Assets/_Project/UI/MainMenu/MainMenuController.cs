@@ -1,4 +1,5 @@
 using MovementMD.Core;
+using MovementMD.UI.Settings;
 using UnityEngine;
 using UnityEngine.UIElements;
 
@@ -9,10 +10,12 @@ namespace MovementMD.UI.MainMenu
     public sealed class MainMenuController : MonoBehaviour
     {
         private VisualElement _root;
+        private SettingsController _settings;
 
         private void Start()
         {
             Build();
+            _settings = FindFirstObjectByType<SettingsController>();
             var flow = AppFlow.Instance;
             if (flow != null)
             {
@@ -51,6 +54,7 @@ namespace MovementMD.UI.MainMenu
             column.Add(ModeButton(GameMode.Sandbox, "Sandbox"));
             column.Add(ModeButton(GameMode.Training, "Training"));
             column.Add(UITheme.Spacer(28));
+            column.Add(SettingsButton());
             column.Add(QuitButton());
             column.Add(UITheme.Spacer(36));
             column.Add(UITheme.MakeLabel("F1  Developer Menu      ESC  Back to menu", UITheme.BodySize - 2, UITheme.Muted));
@@ -62,6 +66,18 @@ namespace MovementMD.UI.MainMenu
         {
             var b = UITheme.MakeButton(label, "btn-" + mode);
             b.clicked += () => AppFlow.Instance.RequestMode(mode);
+            return b;
+        }
+
+        private Button SettingsButton()
+        {
+            var b = UITheme.MakeButton("Settings", "btn-settings");
+            b.clicked += () =>
+            {
+                if (_settings == null) return;
+                _root.style.display = DisplayStyle.None; // hide menu so Settings renders cleanly on top
+                _settings.Show(() => _root.style.display = DisplayStyle.Flex);
+            };
             return b;
         }
 

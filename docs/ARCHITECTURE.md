@@ -46,6 +46,9 @@ All components are count-agnostic systems operating over an entity set of `N` mo
 | **App flow** (`_Project/Core`) | Host-layer mode state machine + additive scene orchestration (Boot → Singles/Doubles/Sandbox/Training). Count-agnostic: Singles & Doubles share one Match scene at different N. |
 | **Presentation settings** (`_Project/Presentation`) | `OverlaySettings` — perfect-info overlay flags (position light, look cone, spin meter, playback tell). Read-only by the renderer; never feeds sim state. |
 | **Dev tooling** (`_Project/Dev`, `_Project/UI/DevMenu`) | F1 Developer Menu + `IDevTool` registry; tools route through the `ISimContext` boundary so they compile before Quantum is installed. |
+| **Match flow** (`_Project/Core/Match`) | `MatchController` + `MatchState`: count-agnostic (per-side) first-to-11 / best-of-3 lifecycle with mid-game (at 6) and between-game edit windows. Core-only; UI subscribes to its events. |
+| **Macro / place-geometry** (`_Project/Core/Macro`, `_Project/UI/Macro`) | `MacroState` holds placed geometry (persists the whole match, resets per match); the place UI does free-3D mouse placement, one piece per side per edit window. Both sides' pieces are visible (perfect info). |
+| **Settings** (`_Project/UI/Settings`) | Display + Audio settings, persisted via PlayerPrefs. |
 
 ## Key decisions
 
