@@ -32,7 +32,22 @@ floor, high skill ceiling, across three layers: micro (execution), meso (reading
 - Recording shall be **inverse-speed**: slower while recording → greater stored effect.
 - Stacking shall be **order-independent and deterministic**: `A then B == B then A`,
   reproducible from momentum-at-record plus recorded camera motion.
-- Spin state shall be shown as an **abstract geometric meter**.
+- **Spin generation is a complex, ruleset-defined function.** Inputs: the mover's current
+  velocity, acceleration, and recorded camera (mouse) motion. Output: a velocity +
+  acceleration + impulse effect applied on discharge, triggered by the player on command.
+  - The function is **ruleset-level config, identical for both players** (mirror-match
+    invariant). It is **not per-player config**.
+  - The function parameterizes spin **within** the load-bearing rules above — it does not
+    override the determinism invariants (angle integration, inverse-speed, order-independence).
+  - This extends the original "additive vector over time" discharge to include an **impulse**
+    component (instantaneous momentum change alongside continuous velocity/acceleration).
+  - **Verify in the determinism test:** "recorded camera motion" must mean angular
+    displacement (consistent with the angle-integration rule), NOT raw mouse velocity, or it
+    reintroduces DPI/frame-timing dependence. The velocity/acceleration inputs must be
+    sim-state-derived only (no wall-clock, no render-rate leakage). The impulse output must
+    remain order-independent and bit-reproducible across rollback re-sim.
+- Spin state shall be shown as an **abstract geometric meter** driven by the current ruleset's
+  spin-generation function.
 
 ### Offense
 - Offensive output shall **scale with speed and rate-of-change of direction**.
