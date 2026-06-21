@@ -511,13 +511,26 @@ namespace Quantum {
   }
   [StructLayout(LayoutKind.Explicit)]
   public unsafe partial struct Input {
-    public const Int32 SIZE = 4;
-    public const Int32 ALIGNMENT = 4;
+    public const Int32 SIZE = 72;
+    public const Int32 ALIGNMENT = 8;
+    [FieldOffset(32)]
+    public FPVector2 Move;
+    [FieldOffset(16)]
+    public FPVector2 Look;
+    [FieldOffset(8)]
+    public FP Jump;
     [FieldOffset(0)]
-    private fixed Byte _alignment_padding_[4];
+    public FP Grapple;
+    [FieldOffset(48)]
+    public FPVector3 AimPoint;
     public override readonly Int32 GetHashCode() {
       unchecked { 
         var hash = 19249;
+        hash = hash * 31 + Move.GetHashCode();
+        hash = hash * 31 + Look.GetHashCode();
+        hash = hash * 31 + Jump.GetHashCode();
+        hash = hash * 31 + Grapple.GetHashCode();
+        hash = hash * 31 + AimPoint.GetHashCode();
         return hash;
       }
     }
@@ -536,6 +549,11 @@ namespace Quantum {
     }
     static partial void SerializeCodeGen(void* ptr, FrameSerializer serializer) {
         var p = (Input*)ptr;
+        FP.Serialize(&p->Grapple, serializer);
+        FP.Serialize(&p->Jump, serializer);
+        FPVector2.Serialize(&p->Look, serializer);
+        FPVector2.Serialize(&p->Move, serializer);
+        FPVector3.Serialize(&p->AimPoint, serializer);
     }
   }
   [StructLayout(LayoutKind.Explicit)]
@@ -570,7 +588,7 @@ namespace Quantum {
   }
   [StructLayout(LayoutKind.Explicit)]
   public unsafe partial struct _globals_ {
-    public const Int32 SIZE = 640;
+    public const Int32 SIZE = 1048;
     public const Int32 ALIGNMENT = 8;
     [FieldOffset(0)]
     public AssetRef<Map> Map;
@@ -592,14 +610,14 @@ namespace Quantum {
     public PhysicsSceneSettings PhysicsSettings;
     [FieldOffset(600)]
     public Int32 PlayerConnectedCount;
-    [FieldOffset(604)]
+    [FieldOffset(608)]
     [FramePrinter.FixedArrayAttribute(typeof(Input), 6)]
-    private fixed Byte _input_[24];
-    [FieldOffset(632)]
+    private fixed Byte _input_[432];
+    [FieldOffset(1040)]
     public BitSet6 PlayerLastConnectionState;
     public readonly FixedArray<Input> input {
       get {
-        fixed (byte* p = _input_) { return new FixedArray<Input>(p, 4, 6); }
+        fixed (byte* p = _input_) { return new FixedArray<Input>(p, 72, 6); }
       }
     }
     public override readonly Int32 GetHashCode() {
@@ -637,18 +655,177 @@ namespace Quantum {
     }
   }
   [StructLayout(LayoutKind.Explicit)]
-  public unsafe partial struct Rope : Quantum.IComponent {
-    public const Int32 SIZE = 8;
+  public unsafe partial struct Anchor : Quantum.IComponent {
+    public const Int32 SIZE = 4;
     public const Int32 ALIGNMENT = 4;
     [FieldOffset(0)]
     public Int32 Id;
+    public override readonly Int32 GetHashCode() {
+      unchecked { 
+        var hash = 2017;
+        hash = hash * 31 + Id.GetHashCode();
+        return hash;
+      }
+    }
+    public static void Serialize(void* ptr, FrameSerializer serializer) {
+        var p = (Anchor*)ptr;
+        serializer.Stream.Serialize(&p->Id);
+    }
+  }
+  [StructLayout(LayoutKind.Explicit)]
+  public unsafe partial struct MovementConfig : Quantum.IComponentSingleton {
+    public const Int32 SIZE = 128;
+    public const Int32 ALIGNMENT = 8;
+    [FieldOffset(32)]
+    public FP Gravity;
+    [FieldOffset(88)]
+    public FP MaxSpeed;
+    [FieldOffset(40)]
+    public FP GroundAccel;
+    [FieldOffset(0)]
+    public FP AirAccel;
+    [FieldOffset(48)]
+    public FP GroundFriction;
+    [FieldOffset(56)]
+    public FP JumpBase;
+    [FieldOffset(64)]
+    public FP JumpSinkScale;
+    [FieldOffset(112)]
+    public FP SinkDecaySeconds;
+    [FieldOffset(120)]
+    public FP SinkGain;
+    [FieldOffset(24)]
+    public FP GrappleRestFactor;
+    [FieldOffset(16)]
+    public FP GrapplePlayerMass;
+    [FieldOffset(8)]
+    public FP GrappleMaxRange;
+    [FieldOffset(80)]
+    public FP LookYawRate;
+    [FieldOffset(72)]
+    public FP LookPitchRate;
+    [FieldOffset(104)]
+    public FP PitchMin;
+    [FieldOffset(96)]
+    public FP PitchMax;
+    public override readonly Int32 GetHashCode() {
+      unchecked { 
+        var hash = 5641;
+        hash = hash * 31 + Gravity.GetHashCode();
+        hash = hash * 31 + MaxSpeed.GetHashCode();
+        hash = hash * 31 + GroundAccel.GetHashCode();
+        hash = hash * 31 + AirAccel.GetHashCode();
+        hash = hash * 31 + GroundFriction.GetHashCode();
+        hash = hash * 31 + JumpBase.GetHashCode();
+        hash = hash * 31 + JumpSinkScale.GetHashCode();
+        hash = hash * 31 + SinkDecaySeconds.GetHashCode();
+        hash = hash * 31 + SinkGain.GetHashCode();
+        hash = hash * 31 + GrappleRestFactor.GetHashCode();
+        hash = hash * 31 + GrapplePlayerMass.GetHashCode();
+        hash = hash * 31 + GrappleMaxRange.GetHashCode();
+        hash = hash * 31 + LookYawRate.GetHashCode();
+        hash = hash * 31 + LookPitchRate.GetHashCode();
+        hash = hash * 31 + PitchMin.GetHashCode();
+        hash = hash * 31 + PitchMax.GetHashCode();
+        return hash;
+      }
+    }
+    public static void Serialize(void* ptr, FrameSerializer serializer) {
+        var p = (MovementConfig*)ptr;
+        FP.Serialize(&p->AirAccel, serializer);
+        FP.Serialize(&p->GrappleMaxRange, serializer);
+        FP.Serialize(&p->GrapplePlayerMass, serializer);
+        FP.Serialize(&p->GrappleRestFactor, serializer);
+        FP.Serialize(&p->Gravity, serializer);
+        FP.Serialize(&p->GroundAccel, serializer);
+        FP.Serialize(&p->GroundFriction, serializer);
+        FP.Serialize(&p->JumpBase, serializer);
+        FP.Serialize(&p->JumpSinkScale, serializer);
+        FP.Serialize(&p->LookPitchRate, serializer);
+        FP.Serialize(&p->LookYawRate, serializer);
+        FP.Serialize(&p->MaxSpeed, serializer);
+        FP.Serialize(&p->PitchMax, serializer);
+        FP.Serialize(&p->PitchMin, serializer);
+        FP.Serialize(&p->SinkDecaySeconds, serializer);
+        FP.Serialize(&p->SinkGain, serializer);
+    }
+  }
+  [StructLayout(LayoutKind.Explicit)]
+  public unsafe partial struct Mover : Quantum.IComponent {
+    public const Int32 SIZE = 112;
+    public const Int32 ALIGNMENT = 8;
+    [FieldOffset(0)]
+    public Int32 PlayerIndex;
+    [FieldOffset(88)]
+    public FPVector3 Velocity;
+    [FieldOffset(56)]
+    public FP Yaw;
+    [FieldOffset(32)]
+    public FP Pitch;
+    [FieldOffset(24)]
+    public FP Grounded;
+    [FieldOffset(40)]
+    public FP PrevJump;
+    [FieldOffset(16)]
+    public FP GrappleHeld;
+    [FieldOffset(8)]
+    public FP GrappleActive;
+    [FieldOffset(64)]
+    public FPVector3 GrappleAnchorPos;
+    [FieldOffset(48)]
+    public FP Sink;
+    public override readonly Int32 GetHashCode() {
+      unchecked { 
+        var hash = 6863;
+        hash = hash * 31 + PlayerIndex.GetHashCode();
+        hash = hash * 31 + Velocity.GetHashCode();
+        hash = hash * 31 + Yaw.GetHashCode();
+        hash = hash * 31 + Pitch.GetHashCode();
+        hash = hash * 31 + Grounded.GetHashCode();
+        hash = hash * 31 + PrevJump.GetHashCode();
+        hash = hash * 31 + GrappleHeld.GetHashCode();
+        hash = hash * 31 + GrappleActive.GetHashCode();
+        hash = hash * 31 + GrappleAnchorPos.GetHashCode();
+        hash = hash * 31 + Sink.GetHashCode();
+        return hash;
+      }
+    }
+    public static void Serialize(void* ptr, FrameSerializer serializer) {
+        var p = (Mover*)ptr;
+        serializer.Stream.Serialize(&p->PlayerIndex);
+        FP.Serialize(&p->GrappleActive, serializer);
+        FP.Serialize(&p->GrappleHeld, serializer);
+        FP.Serialize(&p->Grounded, serializer);
+        FP.Serialize(&p->Pitch, serializer);
+        FP.Serialize(&p->PrevJump, serializer);
+        FP.Serialize(&p->Sink, serializer);
+        FP.Serialize(&p->Yaw, serializer);
+        FPVector3.Serialize(&p->GrappleAnchorPos, serializer);
+        FPVector3.Serialize(&p->Velocity, serializer);
+    }
+  }
+  [StructLayout(LayoutKind.Explicit)]
+  public unsafe partial struct Rope : Quantum.IComponent {
+    public const Int32 SIZE = 48;
+    public const Int32 ALIGNMENT = 8;
     [FieldOffset(4)]
+    public Int32 Id;
+    [FieldOffset(8)]
     public QListPtr<RopeNode> Nodes;
+    [FieldOffset(0)]
+    public Int32 AttachedPlayer;
+    [FieldOffset(24)]
+    public FPVector3 PlayerForce;
+    [FieldOffset(16)]
+    public FP SegmentRest;
     public override readonly Int32 GetHashCode() {
       unchecked { 
         var hash = 11467;
         hash = hash * 31 + Id.GetHashCode();
         hash = hash * 31 + Nodes.GetHashCode();
+        hash = hash * 31 + AttachedPlayer.GetHashCode();
+        hash = hash * 31 + PlayerForce.GetHashCode();
+        hash = hash * 31 + SegmentRest.GetHashCode();
         return hash;
       }
     }
@@ -661,8 +838,11 @@ namespace Quantum {
     }
     public static void Serialize(void* ptr, FrameSerializer serializer) {
         var p = (Rope*)ptr;
+        serializer.Stream.Serialize(&p->AttachedPlayer);
         serializer.Stream.Serialize(&p->Id);
         QList.Serialize(&p->Nodes, serializer, Statics.SerializeRopeNode);
+        FP.Serialize(&p->SegmentRest, serializer);
+        FPVector3.Serialize(&p->PlayerForce, serializer);
     }
   }
   [StructLayout(LayoutKind.Explicit)]
@@ -719,12 +899,18 @@ namespace Quantum {
       Initialize(this, this.SimulationConfig.Entities, 256);
       _ComponentSignalsOnAdded = new ComponentReactiveCallbackInvoker[ComponentTypeId.Type.Length];
       _ComponentSignalsOnRemoved = new ComponentReactiveCallbackInvoker[ComponentTypeId.Type.Length];
+      BuildSignalsArrayOnComponentAdded<Quantum.Anchor>();
+      BuildSignalsArrayOnComponentRemoved<Quantum.Anchor>();
       BuildSignalsArrayOnComponentAdded<CharacterController2D>();
       BuildSignalsArrayOnComponentRemoved<CharacterController2D>();
       BuildSignalsArrayOnComponentAdded<CharacterController3D>();
       BuildSignalsArrayOnComponentRemoved<CharacterController3D>();
       BuildSignalsArrayOnComponentAdded<MapEntityLink>();
       BuildSignalsArrayOnComponentRemoved<MapEntityLink>();
+      BuildSignalsArrayOnComponentAdded<Quantum.MovementConfig>();
+      BuildSignalsArrayOnComponentRemoved<Quantum.MovementConfig>();
+      BuildSignalsArrayOnComponentAdded<Quantum.Mover>();
+      BuildSignalsArrayOnComponentRemoved<Quantum.Mover>();
       BuildSignalsArrayOnComponentAdded<NavMeshAvoidanceAgent>();
       BuildSignalsArrayOnComponentRemoved<NavMeshAvoidanceAgent>();
       BuildSignalsArrayOnComponentAdded<NavMeshAvoidanceObstacle>();
@@ -765,6 +951,11 @@ namespace Quantum {
     partial void SetPlayerInputCodeGen(PlayerRef player, Input input) {
       if ((int)player >= (int)_globals->input.Length) { throw new System.ArgumentOutOfRangeException("player"); }
       var i = _globals->input.GetPointer(player);
+      i->Move = input.Move;
+      i->Look = input.Look;
+      i->Jump = input.Jump;
+      i->Grapple = input.Grapple;
+      i->AimPoint = input.AimPoint;
     }
     public Input* GetPlayerInput(PlayerRef player) {
       if ((int)player >= (int)_globals->input.Length) { throw new System.ArgumentOutOfRangeException("player"); }
@@ -788,6 +979,7 @@ namespace Quantum {
       SerializeInput = Quantum.Input.Serialize;
     }
     static partial void RegisterSimulationTypesGen(TypeRegistry typeRegistry) {
+      typeRegistry.Register(typeof(Quantum.Anchor), Quantum.Anchor.SIZE);
       typeRegistry.Register(typeof(AssetGuid), AssetGuid.SIZE);
       typeRegistry.Register(typeof(AssetRef), AssetRef.SIZE);
       typeRegistry.Register(typeof(Quantum.BitSet1024), Quantum.BitSet1024.SIZE);
@@ -835,6 +1027,8 @@ namespace Quantum {
       typeRegistry.Register(typeof(LayerMask), LayerMask.SIZE);
       typeRegistry.Register(typeof(MapEntityId), MapEntityId.SIZE);
       typeRegistry.Register(typeof(MapEntityLink), MapEntityLink.SIZE);
+      typeRegistry.Register(typeof(Quantum.MovementConfig), Quantum.MovementConfig.SIZE);
+      typeRegistry.Register(typeof(Quantum.Mover), Quantum.Mover.SIZE);
       typeRegistry.Register(typeof(NavMeshAvoidanceAgent), NavMeshAvoidanceAgent.SIZE);
       typeRegistry.Register(typeof(NavMeshAvoidanceObstacle), NavMeshAvoidanceObstacle.SIZE);
       typeRegistry.Register(typeof(NavMeshPathfinder), NavMeshPathfinder.SIZE);
@@ -875,8 +1069,11 @@ namespace Quantum {
       typeRegistry.Register(typeof(Quantum._globals_), Quantum._globals_.SIZE);
     }
     static partial void InitComponentTypeIdGen() {
-      ComponentTypeId.Reset(ComponentTypeId.BuiltInComponentCount + 2)
+      ComponentTypeId.Reset(ComponentTypeId.BuiltInComponentCount + 5)
         .AddBuiltInComponents()
+        .Add<Quantum.Anchor>(Quantum.Anchor.Serialize, null, null, ComponentFlags.None)
+        .Add<Quantum.MovementConfig>(Quantum.MovementConfig.Serialize, null, null, ComponentFlags.Singleton)
+        .Add<Quantum.Mover>(Quantum.Mover.Serialize, null, null, ComponentFlags.None)
         .Add<Quantum.Rope>(Quantum.Rope.Serialize, null, Quantum.Rope.OnRemoved, ComponentFlags.None)
         .Add<Quantum.RopeSolverConfig>(Quantum.RopeSolverConfig.Serialize, null, null, ComponentFlags.Singleton)
         .Finish();

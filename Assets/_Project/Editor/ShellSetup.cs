@@ -1,6 +1,9 @@
 #if UNITY_EDITOR
 using MovementMD.Core;
 using MovementMD.Core.Macro;
+using MovementMD.Sim;
+using MovementMD.UI.Sandbox;
+using Quantum;
 using MovementMD.Core.Match;
 using MovementMD.Dev;
 using MovementMD.Presentation;
@@ -68,7 +71,7 @@ namespace MovementMD.Editor
             if (panel == null) Debug.LogError("[ShellSetup] PanelSettings failed to load after import — UIDocuments will render black.");
 
             CreatePlaceholderScene(MatchPath, new Color(0.18f, 0.20f, 0.24f), "Match (count-agnostic: 1v1 / 2v2)");
-            CreatePlaceholderScene(SandboxPath, new Color(0.14f, 0.22f, 0.18f), "Sandbox");
+            CreateSandboxScene(panel, palette);
             CreatePlaceholderScene(TrainingPath, new Color(0.22f, 0.18f, 0.14f), "Training");
             CreateBootScene(panel, tunables, palette, grappleVisual);
 
@@ -179,6 +182,70 @@ namespace MovementMD.Editor
 
             var hud = hudGo.AddComponent<HUDController>();
             AssignSerialized(hud, "modeLabel", text);
+        }
+
+        // The Sandbox scene hosts the real §5 Quantum sim + free-form place-geometry UI.
+        private static void CreateSandboxScene(PanelSettings panel, GeometryPalette palette)
+        {
+            var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
+
+            var camGo = new GameObject("Main Camera");
+            camGo.tag = "MainCamera";                       // OTS view + place-geometry raycasts use Camera.main
+            var cam = camGo.AddComponent<Camera>();
+            cam.clearFlags = CameraClearFlags.SolidColor;
+            cam.backgroundColor = new Color(0.05f, 0.06f, 0.08f);
+            cam.transform.position = new Vector3(0, 3, -8);
+
+            var lightGo = new GameObject("Directional Light");
+            var light = lightGo.AddComponent<Light>();
+            light.type = LightType.Directional;
+            light.intensity = 1.1f;
+            lightGo.transform.localEulerAngles = new Vector3(50f, -30f, 0f);
+
+            // No EventSystem here — Boot's persistent EventSystem (always loaded) handles UI input for every mode scene.
+
+            // §5 Quantum sim host: QuantumMapData (the sim's map) + QuantumSimContext (starts the sim and
+            // adds the input poller + over-the-shoulder view + SandboxTuner on enable).
+            var map = FindSimMap();
+            var simGo = new GameObject("[QuantumSim]");
+            if (map != null)
+            {
+                var qmd = simGo.AddComponent<QuantumMapData>();
+                qmd.AssetRef = map;   // Quantum AssetRef<Map> has an implicit converter from Map
+            }
+            else
+            {
+                Debug.LogError("[ShellSetup] No Quantum Map asset found — Sandbox sim will not start. Add a QuantumMapData manually.");
+            }
+            simGo.AddComponent<QuantumSimContext>();
+
+            // 4-view place-geometry builder (self-contained uGUI), toggled with F.
+            var placeGo = new GameObject("[PlaceGeometry]");
+            AssignSerialized(placeGo.AddComponent<SandboxBuilderUI>(), "palette", palette);
+
+            var renderGo = new GameObject("[PlacedGeometryRenderer]");
+            AssignSerialized(renderGo.AddComponent<PlacedGeometryRenderer>(), "palette", palette);
+
+            EditorSceneManager.MarkSceneDirty(scene);
+            EditorSceneManager.SaveScene(scene, SandboxPath);
+        }
+
+        // The §5 sim's map — the same one RopeSpike's QuantumMapData references (by GUID), else any Quantum map.
+        private static Map FindSimMap()
+        {
+            var path = AssetDatabase.GUIDToAssetPath("045fb3d47d43630a");
+            if (!string.IsNullOrEmpty(path))
+            {
+                var m = AssetDatabase.LoadAssetAtPath<Map>(path);
+                if (m != null) return m;
+            }
+            foreach (var g in AssetDatabase.FindAssets("t:Map"))
+            {
+                var p = AssetDatabase.GUIDToAssetPath(g);
+                var m = AssetDatabase.LoadAssetAtPath<Map>(p);
+                if (m != null) return m;
+            }
+            return null;
         }
 
         private static void CreatePlaceholderScene(string path, Color ground, string marker)

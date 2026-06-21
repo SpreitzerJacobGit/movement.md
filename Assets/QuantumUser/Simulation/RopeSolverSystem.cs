@@ -53,11 +53,21 @@ namespace Quantum
                 var rope = f.Unsafe.GetPointer<Rope>(ropes[r]);
                 var nodes = f.ResolveList(rope->Nodes);
                 ClearAndGravity(nodes, cfg);
-                AccumulateSprings(nodes, cfg);
+                AccumulateSprings(nodes, rope->SegmentRest, cfg);
             }
 
             // --- 3. Rope-rope collisions, resolved in Id-sorted pair order (brief §4.3). ---
             ResolveCollisionsIdSorted(f, ropes, ids, n, cfg);
+
+            // --- 3.5 Stash the chain force on the player-end node for coupled grapple ropes.
+            //        Read BEFORE Integrate zeroes pinned-node forces; MovementSystem applies it next tick. ---
+            for (int r = 0; r < n; r++)
+            {
+                var rope = f.Unsafe.GetPointer<Rope>(ropes[r]);
+                if (rope->AttachedPlayer < 0) continue;
+                var nodes = f.ResolveList(rope->Nodes);
+                rope->PlayerForce = nodes.GetPointer(nodes.Count - 1)->Force;
+            }
 
             // --- 4. Integrate (semi-implicit Euler) and zero the force accumulator. ---
             for (int r = 0; r < n; r++)
@@ -65,15 +75,6 @@ namespace Quantum
                 var rope = f.Unsafe.GetPointer<Rope>(ropes[r]);
                 var nodes = f.ResolveList(rope->Nodes);
                 Integrate(nodes, dt);
-            }
-
-            // DIAGNOSTIC — remove after #5. Heartbeat once/second proving the sim ticks and ropes move.
-            if (f.Number == 1 || f.Number % 128 == 0)
-            {
-                var r0 = f.Unsafe.GetPointer<Rope>(ropes[0]);
-                var n0 = f.ResolveList(r0->Nodes);
-                FPVector3 tip = n0.GetPointer(n0.Count - 1)->Pos;
-                Log.Error($"[RopeSpike] tick {f.Number}: {n} ropes, rope0 tip = {tip}");
             }
         }
 
@@ -88,7 +89,7 @@ namespace Quantum
             }
         }
 
-        static void AccumulateSprings(QList<RopeNode> nodes, RopeSolverConfig cfg)
+        static void AccumulateSprings(QList<RopeNode> nodes, FP segmentRest, RopeSolverConfig cfg)
         {
             for (int i = 0; i < nodes.Count - 1; i++)
             {
@@ -100,7 +101,7 @@ namespace Quantum
                 if (len == FP._0) continue;
 
                 FPVector3 dir = delta * (FP._1 / len);
-                FP stretch = len - cfg.SegmentRest;
+                FP stretch = len - segmentRest;
                 FPVector3 springF = dir * (cfg.SpringK * stretch);
 
                 FPVector3 relVel = b->Vel - a->Vel;

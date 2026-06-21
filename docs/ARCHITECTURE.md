@@ -21,12 +21,14 @@ keep deterministic under rollback and is validated **before** anything else is b
   passed in Quantum at 4 ropes / 128 Hz. See [`spike/determinism/FIRST_TEST.md`](../spike/determinism/FIRST_TEST.md)
   Run 2. The build sequence (`PROJECT_BRIEF.md` §5) is unlocked.
 - **Tick rate: 128 Hz** (`SessionConfig.UpdateFPS = 128`). Counter-Strike competitive cadence.
-- **Open: Aspect #5 frame budget.** Per-tick `RopeSolverSystem` cost vs the 7.8125 ms budget is
-  still to be read from the Quantum Profiler; it decides 4-player day-one vs. 1v1-first, not
-  engine viability.
-- **Working title: movement.md.** Repo: https://github.com/SpreitzerJacobGit/movement.md (the
-  Unity project at `C:\Users\jacob\movement.md`; this docs/spike folder at `C:\Claude\movement.md`
-  is currently separate and not yet in the repo).
+- **Aspect #5 frame budget: CLOSED (2026-06-19).** Quantum Profiler measured `RopeSolverSystem`
+  avg 0.1490 ms / max 0.1997 ms → depth-8 rollback = 1.598 ms → **1.797 ms of 7.8125 ms (~77%
+  headroom)** at the 4-rope / 6-pair worst case. Verdict: **4-player ships day one** (not
+  1v1-first). All five aspects now pass in Quantum; Path 1 fully validated.
+- **Working title: movement.md.** Repo: https://github.com/SpreitzerJacobGit/movement.md — now a
+  single unified repo containing both the Unity project and the design docs/spike. Canonical local
+  working copy: `C:\Users\jacob\movement.md` (the Unity+Quantum project). (`C:\Claude\movement.md`
+  is a stale secondary copy, retained for now.)
 
 ## Component map
 
