@@ -1,4 +1,5 @@
 using System.Collections.Generic;
+using Simulation.Core;
 using Simulation.Math;
 using Simulation.Systems;
 using Xunit;
@@ -153,8 +154,82 @@ public class SystemTests
     {
     }
 
-    [Fact(Skip = "Pure-C# MovementSystem not yet ported (Quantum ECS MovementSystem stays Unity-side until SDK restored); revisit when ported.")]
+    [Fact]
     public void Movement_QuantizedInputs()
     {
+        var cfg = TestMovementConfig();
+        var inputs = MakeInputSequence(12345u, 300);
+
+        // Run A: 300 ticks with the fixed input sequence.
+        var a = TestMover();
+        foreach (var i in inputs) MovementSystem.Step(ref a, i, cfg);
+
+        // Run B: identical inputs — must be bit-identical (determinism + fixed-point quantization).
+        var b = TestMover();
+        foreach (var i in inputs) MovementSystem.Step(ref b, i, cfg);
+        Assert.True(MoverEq(a, b), "movement diverged across two identical runs");
+
+        // Rollback: snapshot at tick 100, finish, restore, re-run 100..300 — must match the straight run.
+        var c = TestMover();
+        for (int t = 0; t < 100; t++) MovementSystem.Step(ref c, inputs[t], cfg);
+        var snap = c;
+        for (int t = 100; t < inputs.Count; t++) MovementSystem.Step(ref c, inputs[t], cfg);
+        c = snap;
+        for (int t = 100; t < inputs.Count; t++) MovementSystem.Step(ref c, inputs[t], cfg);
+        Assert.True(MoverEq(c, b), "movement rollback re-sim diverged from the straight run");
+
+        // Sanity: different inputs must produce a different result (not trivially constant).
+        var d = TestMover();
+        var other = MakeInputSequence(99991u, 300);
+        foreach (var i in other) MovementSystem.Step(ref d, i, cfg);
+        Assert.False(MoverEq(d, b), "movement produced identical state for different inputs (trivially constant?)");
     }
+
+    // --- movement helpers ---
+
+    static MovementConfig TestMovementConfig() => new()
+    {
+        Dt               = Fixed.One / Fixed.FromInt(128),
+        Gravity          = Fixed.FromInt(20),
+        MaxSpeed         = Fixed.FromInt(12),
+        GroundAccel      = Fixed.FromInt(120),
+        AirAccel         = Fixed.FromInt(40),
+        GroundFriction   = Fixed.FromInt(100),
+        JumpBase         = Fixed.FromInt(2),
+        JumpSinkScale    = Fixed.FromInt(1),
+        SinkDecaySeconds = Fixed.FromInt(2),
+        SinkGain         = Fixed.FromInt(1) / Fixed.FromInt(2),
+        LookYawRate      = Fixed.One / Fixed.FromInt(300),
+        LookPitchRate    = Fixed.One / Fixed.FromInt(300),
+        PitchMin         = -(Fixed.FromInt(15708) / Fixed.FromInt(10000)),
+        PitchMax         =  Fixed.FromInt(15708) / Fixed.FromInt(10000),
+    };
+
+    static Mover TestMover() => new()
+    {
+        Pos = new FixedVec3(Fixed.Zero, Fixed.FromInt(3), Fixed.Zero),
+    };
+
+    static List<PlayerInputs> MakeInputSequence(uint seed, int count)
+    {
+        var list = new List<PlayerInputs>(count);
+        uint s = seed == 0 ? 1u : seed;
+        for (int i = 0; i < count; i++)
+        {
+            s = s * 1664525u + 1013904223u;
+            Fixed mx    = Fixed.FromInt((int)(s % 3) - 1);
+            Fixed mz    = Fixed.FromInt((int)((s >> 2) % 3) - 1);
+            Fixed yaw   = Fixed.FromDouble(((s % 50) - 25) / 100.0);
+            Fixed pitch = Fixed.FromDouble(((s % 20) - 10) / 100.0);
+            bool  jump  = (s % 17) == 0;
+            list.Add(new PlayerInputs(mx, mz, yaw, pitch, jump, false, false, FixedVec3.Zero, false, false, false));
+        }
+        return list;
+    }
+
+    static bool MoverEq(in Mover a, in Mover b) =>
+        a.Pos.X.Raw == b.Pos.X.Raw && a.Pos.Y.Raw == b.Pos.Y.Raw && a.Pos.Z.Raw == b.Pos.Z.Raw &&
+        a.Vel.X.Raw == b.Vel.X.Raw && a.Vel.Y.Raw == b.Vel.Y.Raw && a.Vel.Z.Raw == b.Vel.Z.Raw &&
+        a.Yaw.Raw == b.Yaw.Raw && a.Pitch.Raw == b.Pitch.Raw &&
+        a.Grounded.Raw == b.Grounded.Raw && a.PrevJump.Raw == b.PrevJump.Raw && a.Sink.Raw == b.Sink.Raw;
 }

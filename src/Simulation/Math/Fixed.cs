@@ -52,6 +52,28 @@ public readonly struct Fixed : IEquatable<Fixed>
 
     public static Fixed Clamp01(Fixed v) => v.Raw < 0 ? Zero : (v > One ? One : v);
 
+    // Fixed-point trig via a 2048-entry LUT over [0, 2pi). Built once at type init from System.Math.Sin
+    // (setup-only — float never enters the sim step; the LUT is frozen deterministic data afterward).
+    private static readonly Fixed TwoPi = FromDouble(System.Math.PI * 2.0);
+    private static readonly Fixed[] SinLut = BuildSinLut();
+    private static Fixed[] BuildSinLut()
+    {
+        const int n = 2048;
+        var lut = new Fixed[n];
+        for (int i = 0; i < n; i++)
+            lut[i] = FromDouble(System.Math.Sin(System.Math.PI * 2.0 * i / n));
+        return lut;
+    }
+    public static Fixed Sin(Fixed radians) => SinLut[LutIndex(radians)];
+    public static Fixed Cos(Fixed radians) => SinLut[(LutIndex(radians) + 2048 / 4) % 2048];
+    private static int LutIndex(Fixed radians)
+    {
+        long r = radians.Raw % TwoPi.Raw;       // reduce to [-2pi, 2pi)
+        if (r < 0) r += TwoPi.Raw;               // [0, 2pi)
+        long idx = (long)(((Int128)r * 2048) / TwoPi.Raw);
+        return (int)(idx % 2048);
+    }
+
     public bool Equals(Fixed other) => Raw == other.Raw;
     public override bool Equals(object? o) => o is Fixed f && Equals(f);
     public override int GetHashCode() => Raw.GetHashCode();
