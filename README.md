@@ -1,35 +1,72 @@
-# ai-dev-template
+# movement.md
 
-A batteries-included starting point for AI-driven software projects. Clone this repo, fill in the placeholder docs, and drop your own code alongside them — Claude Code (and other AI assistants) will pick up the context automatically.
+A perfect-information, mirror-match movement shooter where the only hidden variable is *the
+future* — what emerges when two fully-visible, deterministic, deeply-interacting physical
+systems collide at speed. Skill at every layer is the ability to predict and shape that future
+faster than your opponent.
 
-## What's in the box
+Working title. Repo: https://github.com/SpreitzerJacobGit/movement.md
 
-| File / Folder | Purpose |
+## Status
+
+- **Engine: Unity 6000.3.17f1 + Photon Quantum 3.0.11 — validated by the First Test
+  (2026-06-17).** Determinism across runs, rollback re-simulation, and fixed-point
+  expressibility all passed at 4 ropes / 128 Hz. The build sequence is unlocked.
+- **Simulation tick rate: 128 Hz** (`SessionConfig.UpdateFPS = 128`).
+- **Ship target: 1v1 (minimum) and 4-player (day one).** First Test Aspect #5 measured ~77%
+  frame-budget headroom at the 4-rope worst case → 4-player ships with the launch.
+- **Signature mechanic (highest risk, now de-risked):** stiff coupled-spring grapple ropes that
+  physically collide with each other, kept bit-exact under rollback.
+
+## Stack
+
+| Layer | Choice |
 |---|---|
-| `CLAUDE.md` | Entry point for Claude Code — loads all other docs and sets working conventions |
-| `docs/REQUIREMENTS.md` | Functional and non-functional requirements |
-| `docs/ARCHITECTURE.md` | System design, key decisions, component map |
-| `docs/CONVENTIONS.md` | Coding style, naming rules, formatting standards |
-| `docs/WORKFLOWS.md` | Development workflows: branching, review, deploy |
-| `docs/REVIEWERS.md` | Project-specific reviewer personas used by `/review` — filled in during `/init` |
-| `docs/ONBOARDING.md` | The initialization interview process — defines what `/init` does |
-| `.claude/settings.json` | Claude Code hooks and permission allow-list scaffold |
-| `.claude/commands/` | Custom slash commands — `/init` and `/review` pre-seeded, add your own |
+| Engine / renderer | Unity 6000.3.17f1 (LTS) |
+| Deterministic sim | Photon Quantum 3.0.11 (deterministic ECS, fixed-point physics) |
+| Netcode | Input-only transport, remote-input prediction, rollback re-simulation, server-authoritative |
+| Topology | 1v1 → P2P + referee; 4-player → authoritative server |
+| Hosting | Deferred and swappable (Edgegap / Gameye / GameFabric / GameLift) |
 
-## How to use this template
+## Where to start
 
-1. **Clone / fork** this repo into your new project directory.
-2. **Open it with Claude Code** — the AI will detect the un-initialized docs and prompt you to run the setup interview. Say yes, or run `/init` yourself.
-3. **Answer the interview questions** — the AI fills in the `docs/` files from your answers and proposes a set of project-specific reviewers for the `/review` command.
-4. **Add your code** — `CLAUDE.md` is already wired up; the AI has context from the start.
-5. **Remove or rename** any docs that don't apply; add new ones and register them in `CLAUDE.md`.
+| Read this | For |
+|---|---|
+| [`PROJECT_BRIEF.md`](./PROJECT_BRIEF.md) | The authoritative starting brief — read first |
+| [`CLAUDE.md`](./CLAUDE.md) | AI-assistant entry point / doc index |
+| [`docs/REQUIREMENTS.md`](./docs/REQUIREMENTS.md) | Functional and non-functional requirements |
+| [`docs/ARCHITECTURE.md`](./docs/ARCHITECTURE.md) | System design, component map, key decisions |
+| [`docs/CONVENTIONS.md`](./docs/CONVENTIONS.md) | Coding style + the non-negotiable determinism rules |
+| [`spike/determinism/FIRST_TEST.md`](./spike/determinism/FIRST_TEST.md) | The First Test that gated everything |
+| [`docs/design/`](./docs/design/) | Front-end menu design docs |
 
-### Manual setup (without the interview)
+## Repo layout
 
-If you'd rather fill in the docs yourself, replace all `TODO` placeholders in `docs/` directly. The AI will stop prompting for initialization once no TODOs remain. You can still run `/init` later to get reviewer suggestions.
+```
+movement.md/
+├── PROJECT_BRIEF.md        # authoritative starting brief — read first
+├── CLAUDE.md               # AI entry point / index
+├── README.md               # this file
+├── docs/                   # REQUIREMENTS / ARCHITECTURE / CONVENTIONS / WORKFLOWS / REVIEWERS
+│   └── design/             # front-end menu design docs
+├── spike/                  # the First Test — determinism spike + setup guide
+│   └── determinism/        # 4-rope solver + 5-aspect validation harness
+├── Assets/_Project/        # Unity project code (Core, Sim, UI, Presentation, Dev tools)
+├── Assets/Scenes/          # Boot / Match / Sandbox / Training scenes
+└── ProjectSettings/        # Unity project settings
+```
 
-## Philosophy
+## Core principles
 
-- Every doc file has a single responsibility.
-- `CLAUDE.md` is the index — it should stay short and just point elsewhere.
-- Prefer plain prose over rigid templates; the AI reads intent, not just structure.
+These dominate every decision (see `PROJECT_BRIEF.md` §7):
+
+- **Bit-exact determinism** — the sim is a pure function of inputs.
+- **Count-agnostic** — no `player1`/`player2`; systems iterate `N` movers.
+- **Perfect information** — no hidden-information mechanics may be added.
+- **Evidence over theory** — the engine was chosen by the First Test, not argued in advance.
+
+## AI assistants
+
+This repo is set up for Claude Code and other AI assistants. `CLAUDE.md` is the entry point and
+loads conventions, required docs, and working rules. Custom slash commands live in
+`.claude/commands/` (`/init`, `/review`).
