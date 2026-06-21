@@ -47,6 +47,9 @@ namespace Quantum
             cfg->JumpSinkScale  = (FP)1;                     // extra impulse per unit of sink
             cfg->SinkDecaySeconds = (FP)2;                   // N — sink decays over this many seconds
             cfg->SinkGain       = (FP)1 / (FP)2;             // 0.5 — sink gained per unit of impact speed
+            cfg->GrappleRestFactor = (FP)1 / (FP)2;          // 0.5 — rope spawns stretched, reels player in
+            cfg->GrapplePlayerMass = (FP)5;                  // effective player mass for grapple coupling
+            cfg->GrappleMaxRange   = (FP)30;
             cfg->LookYawRate    = (FP)1 / (FP)300;           // ~0.0033 rad per pixel of mouse delta (tune for feel)
             cfg->LookPitchRate  = (FP)1 / (FP)300;
             cfg->PitchMin       = -((FP)15708 / (FP)10000);  // ~-pi/2

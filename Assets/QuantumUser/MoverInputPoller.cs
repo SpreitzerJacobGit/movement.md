@@ -40,7 +40,17 @@ namespace Quantum
             FP lookY = FP.FromFloat_UNSAFE(md.y);
 
             FP jump = kbd.spaceKey.isPressed ? FP._1 : FP._0;
-            FP grapple = mouse.leftButton.isPressed ? FP._1 : FP._0;    // HOOK: replace with the in-progress button
+            FP grapple = mouse.rightButton.isPressed ? FP._1 : FP._0;   // HOOK: replace with the in-progress button
+
+            // Aim point = where the screen-center reticle (camera forward) hits the world (room/pieces),
+            // so the grapple lands on the cursor. Float->FP here at the input boundary only.
+            Vector3 aimPt = Vector3.zero;
+            var cam = Camera.main;
+            if (cam != null)
+            {
+                Ray r = cam.ScreenPointToRay(new Vector2(Screen.width * 0.5f, Screen.height * 0.5f));
+                aimPt = Physics.Raycast(r, out var hit, 60f) ? hit.point : (r.origin + r.direction * 30f);
+            }
 
             var i = new Quantum.Input
             {
@@ -48,6 +58,7 @@ namespace Quantum
                 Look = new FPVector2(lookX, lookY),
                 Jump = jump,
                 Grapple = grapple,
+                AimPoint = new FPVector3(FP.FromFloat_UNSAFE(aimPt.x), FP.FromFloat_UNSAFE(aimPt.y), FP.FromFloat_UNSAFE(aimPt.z)),
             };
             c.SetInput(i, DeterministicInputFlags.Repeatable);
         }

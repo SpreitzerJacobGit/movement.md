@@ -95,8 +95,9 @@ namespace Quantum
             var it = f.Filter<Mover>();
             while (it.Next(out EntityRef e, out Mover mv))
             {
-                // prevJump/grappleHeld echo last tick's inputs; grounded/sink show movement state.
-                info = $" | grounded={mv.Grounded} sink={mv.Sink} prevJump={mv.PrevJump} grappleHeld={mv.GrappleHeld} vel={mv.Velocity}";
+                var t = f.Get<Transform3D>(e);
+                // prevJump/grappleHeld echo last tick's inputs; grounded/sink/pos show movement + render state.
+                info = $" | pos={t.Position} grounded={mv.Grounded} sink={mv.Sink} prevJump={mv.PrevJump} grappleHeld={mv.GrappleHeld} vel={mv.Velocity}";
                 break;
             }
             Debug.Log($"[RopeSpike] frame {f.Number}: ropes={ropes} movers={movers}{info}");

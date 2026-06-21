@@ -26,7 +26,7 @@ Photon Quantum is installed. No gameplay systems live here yet.
 |---|---|---|---|
 | Singles | `Match` | 2 (1v1) | |
 | Doubles | `Match` | 4 (2v2) | Same scene/code as Singles — only `PlayerCount` differs |
-| Sandbox | `Sandbox` | 1 | Free-form: no goals, all abilities, add/remove geometry, slow-mo |
+| Sandbox | `Sandbox` | 1 | Free-form: no goals, all abilities, add/remove geometry |
 | Training | `Training` | 1 | Scripted scenarios with objectives + pass/fail (scenarios TBD) |
 
 Singles and Doubles share one Match scene deliberately — the simulation is count-agnostic, so

@@ -38,6 +38,12 @@ singleton component MovementConfig
     FP JumpSinkScale;   // extra jump impulse per unit of sink (sink fuels bigger jumps)
     FP SinkDecaySeconds; // N — sink decays to ~0 over this many seconds
     FP SinkGain;        // sink gained per unit of impact speed on landing
+
+    // Grapple (live-tunable via SandboxTuner)
+    FP GrappleRestFactor; // <1 => rope spawns stretched, reels player in
+    FP GrapplePlayerMass; // effective player mass for grapple coupling
+    FP GrappleMaxRange;   // max grapple distance
+
     FP LookYawRate;     // yaw delta per tick per unit Look.x
     FP LookPitchRate;   // pitch delta per tick per unit Look.y
     FP PitchMin;        // pitch clamp lower bound
@@ -56,4 +62,5 @@ input
     FPVector2 Look;
     FP        Jump;
     FP        Grapple;       // 1 held / 0 released. HOOK: wire the in-progress button (other branch) -> here.
+    FPVector3 AimPoint;      // world point the screen-center reticle aims at (camera ray hit) -> grapple lands on cursor
 }

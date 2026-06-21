@@ -511,7 +511,7 @@ namespace Quantum {
   }
   [StructLayout(LayoutKind.Explicit)]
   public unsafe partial struct Input {
-    public const Int32 SIZE = 48;
+    public const Int32 SIZE = 72;
     public const Int32 ALIGNMENT = 8;
     [FieldOffset(32)]
     public FPVector2 Move;
@@ -521,6 +521,8 @@ namespace Quantum {
     public FP Jump;
     [FieldOffset(0)]
     public FP Grapple;
+    [FieldOffset(48)]
+    public FPVector3 AimPoint;
     public override readonly Int32 GetHashCode() {
       unchecked { 
         var hash = 19249;
@@ -528,6 +530,7 @@ namespace Quantum {
         hash = hash * 31 + Look.GetHashCode();
         hash = hash * 31 + Jump.GetHashCode();
         hash = hash * 31 + Grapple.GetHashCode();
+        hash = hash * 31 + AimPoint.GetHashCode();
         return hash;
       }
     }
@@ -550,6 +553,7 @@ namespace Quantum {
         FP.Serialize(&p->Jump, serializer);
         FPVector2.Serialize(&p->Look, serializer);
         FPVector2.Serialize(&p->Move, serializer);
+        FPVector3.Serialize(&p->AimPoint, serializer);
     }
   }
   [StructLayout(LayoutKind.Explicit)]
@@ -584,7 +588,7 @@ namespace Quantum {
   }
   [StructLayout(LayoutKind.Explicit)]
   public unsafe partial struct _globals_ {
-    public const Int32 SIZE = 904;
+    public const Int32 SIZE = 1048;
     public const Int32 ALIGNMENT = 8;
     [FieldOffset(0)]
     public AssetRef<Map> Map;
@@ -608,12 +612,12 @@ namespace Quantum {
     public Int32 PlayerConnectedCount;
     [FieldOffset(608)]
     [FramePrinter.FixedArrayAttribute(typeof(Input), 6)]
-    private fixed Byte _input_[288];
-    [FieldOffset(896)]
+    private fixed Byte _input_[432];
+    [FieldOffset(1040)]
     public BitSet6 PlayerLastConnectionState;
     public readonly FixedArray<Input> input {
       get {
-        fixed (byte* p = _input_) { return new FixedArray<Input>(p, 48, 6); }
+        fixed (byte* p = _input_) { return new FixedArray<Input>(p, 72, 6); }
       }
     }
     public override readonly Int32 GetHashCode() {
@@ -670,33 +674,39 @@ namespace Quantum {
   }
   [StructLayout(LayoutKind.Explicit)]
   public unsafe partial struct MovementConfig : Quantum.IComponentSingleton {
-    public const Int32 SIZE = 104;
+    public const Int32 SIZE = 128;
     public const Int32 ALIGNMENT = 8;
-    [FieldOffset(8)]
+    [FieldOffset(32)]
     public FP Gravity;
-    [FieldOffset(64)]
+    [FieldOffset(88)]
     public FP MaxSpeed;
-    [FieldOffset(16)]
+    [FieldOffset(40)]
     public FP GroundAccel;
     [FieldOffset(0)]
     public FP AirAccel;
-    [FieldOffset(24)]
-    public FP GroundFriction;
-    [FieldOffset(32)]
-    public FP JumpBase;
-    [FieldOffset(40)]
-    public FP JumpSinkScale;
-    [FieldOffset(88)]
-    public FP SinkDecaySeconds;
-    [FieldOffset(96)]
-    public FP SinkGain;
-    [FieldOffset(56)]
-    public FP LookYawRate;
     [FieldOffset(48)]
-    public FP LookPitchRate;
+    public FP GroundFriction;
+    [FieldOffset(56)]
+    public FP JumpBase;
+    [FieldOffset(64)]
+    public FP JumpSinkScale;
+    [FieldOffset(112)]
+    public FP SinkDecaySeconds;
+    [FieldOffset(120)]
+    public FP SinkGain;
+    [FieldOffset(24)]
+    public FP GrappleRestFactor;
+    [FieldOffset(16)]
+    public FP GrapplePlayerMass;
+    [FieldOffset(8)]
+    public FP GrappleMaxRange;
     [FieldOffset(80)]
-    public FP PitchMin;
+    public FP LookYawRate;
     [FieldOffset(72)]
+    public FP LookPitchRate;
+    [FieldOffset(104)]
+    public FP PitchMin;
+    [FieldOffset(96)]
     public FP PitchMax;
     public override readonly Int32 GetHashCode() {
       unchecked { 
@@ -710,6 +720,9 @@ namespace Quantum {
         hash = hash * 31 + JumpSinkScale.GetHashCode();
         hash = hash * 31 + SinkDecaySeconds.GetHashCode();
         hash = hash * 31 + SinkGain.GetHashCode();
+        hash = hash * 31 + GrappleRestFactor.GetHashCode();
+        hash = hash * 31 + GrapplePlayerMass.GetHashCode();
+        hash = hash * 31 + GrappleMaxRange.GetHashCode();
         hash = hash * 31 + LookYawRate.GetHashCode();
         hash = hash * 31 + LookPitchRate.GetHashCode();
         hash = hash * 31 + PitchMin.GetHashCode();
@@ -720,6 +733,9 @@ namespace Quantum {
     public static void Serialize(void* ptr, FrameSerializer serializer) {
         var p = (MovementConfig*)ptr;
         FP.Serialize(&p->AirAccel, serializer);
+        FP.Serialize(&p->GrappleMaxRange, serializer);
+        FP.Serialize(&p->GrapplePlayerMass, serializer);
+        FP.Serialize(&p->GrappleRestFactor, serializer);
         FP.Serialize(&p->Gravity, serializer);
         FP.Serialize(&p->GroundAccel, serializer);
         FP.Serialize(&p->GroundFriction, serializer);
@@ -939,6 +955,7 @@ namespace Quantum {
       i->Look = input.Look;
       i->Jump = input.Jump;
       i->Grapple = input.Grapple;
+      i->AimPoint = input.AimPoint;
     }
     public Input* GetPlayerInput(PlayerRef player) {
       if ((int)player >= (int)_globals->input.Length) { throw new System.ArgumentOutOfRangeException("player"); }

@@ -71,12 +71,14 @@ namespace Quantum.Prototypes {
     public FPVector2 Look;
     public FP Jump;
     public FP Grapple;
+    public FPVector3 AimPoint;
     partial void MaterializeUser(Frame frame, ref Quantum.Input result, in PrototypeMaterializationContext context);
     public void Materialize(Frame frame, ref Quantum.Input result, in PrototypeMaterializationContext context = default) {
         result.Move = this.Move;
         result.Look = this.Look;
         result.Jump = this.Jump;
         result.Grapple = this.Grapple;
+        result.AimPoint = this.AimPoint;
         MaterializeUser(frame, ref result, in context);
     }
   }
@@ -92,6 +94,9 @@ namespace Quantum.Prototypes {
     public FP JumpSinkScale;
     public FP SinkDecaySeconds;
     public FP SinkGain;
+    public FP GrappleRestFactor;
+    public FP GrapplePlayerMass;
+    public FP GrappleMaxRange;
     public FP LookYawRate;
     public FP LookPitchRate;
     public FP PitchMin;
@@ -112,6 +117,9 @@ namespace Quantum.Prototypes {
         result.JumpSinkScale = this.JumpSinkScale;
         result.SinkDecaySeconds = this.SinkDecaySeconds;
         result.SinkGain = this.SinkGain;
+        result.GrappleRestFactor = this.GrappleRestFactor;
+        result.GrapplePlayerMass = this.GrapplePlayerMass;
+        result.GrappleMaxRange = this.GrappleMaxRange;
         result.LookYawRate = this.LookYawRate;
         result.LookPitchRate = this.LookPitchRate;
         result.PitchMin = this.PitchMin;

@@ -19,9 +19,9 @@ MonoBehaviour:
   UserAsset:
     Id:
       Value: 0
-  Scene: RopeSpike
-  ScenePath: Assets/RopeSpike.unity
-  SceneGuid: 50b1c7c820462df438634e9ab363a679
+  Scene: 
+  ScenePath: 
+  SceneGuid: 
   WorldSize: 256
   BucketsCount: 16
   BucketsSubdivisions: 8

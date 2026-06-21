@@ -1,11 +1,9 @@
 // movement.md §5 — debug visualization for the movement + grapple sandbox (Unity / view layer).
 //
 // Builds a visible ROOM (floor + ceiling + walls) matching the analytical surfaces GrappleSystem aims
-// at, a cube per mover, and per-NODE rope rendering so the grapple rope is visible as a chain. Reads
-// the predicted frame; view-layer only (never writes sim state).
-//
-// All fields below are LIVE-tweakable: select this component during Play (or add it in the scene at
-// edit time) and adjust in the inspector to tune the look.
+// at, a cube per mover, per-NODE rope rendering, an over-the-shoulder camera aligned to the mover's aim,
+// and a screen-center reticle. The camera looks exactly in the mover's aim direction, so the reticle
+// (screen center) == grapple aim — grappling lands where you aim. Reads the predicted frame; view-only.
 
 namespace Quantum
 {
@@ -29,17 +27,23 @@ namespace Quantum
         public bool  ShowRopeSegments  = true;   // Gizmos must be ON in the Game view to see segments
         public Color RopeSegmentColor  = new Color(1f, 0.8f, 0.2f);
 
-        [Header("Third-Person Camera")]
-        public float CamDistance     = 7f;
-        public float CamHeight       = 4f;
-        public float CamLookAtHeight = 1f;
+        [Header("Over-the-Shoulder Camera")]
+        public float CamBack     = 4.5f;     // distance behind the mover
+        public float CamHeight   = 2.2f;     // height above the mover's feet
+        public float CamShoulder = 0.7f;     // lateral offset (over the shoulder)
 
-        const float RoomH  = 12f;
+        [Header("Reticle")]
+        public bool  ShowReticle  = true;
+        public Color ReticleColor = new Color(1f, 1f, 1f, 0.85f);
+        public float ReticleHalf  = 5f;      // half-size of the crosshair arms (px)
+
+        const float RoomH  = 30f;   // cube arena: height = width = 30
         const float RoomHW = 15f;
 
         Transform _floor;
         Camera _cam;
         bool _roomBuilt;
+        float _diagTimer;
         readonly Dictionary<int, GameObject> _cubes = new();
         readonly Dictionary<int, GameObject[]> _ropeNodes = new();
 
@@ -49,7 +53,14 @@ namespace Quantum
             var f = QuantumRunner.Default?.Game?.Frames?.Predicted;
             if (f == null) return;
 
-            // Movers (cubes).
+            _diagTimer += Time.deltaTime;
+            if (_diagTimer > 1f)
+            {
+                _diagTimer = 0f;
+                Debug.Log($"[MoverDebugView] cam={(_cam != null ? _cam.transform.position.ToString() : "null")} cubes={_cubes.Count} ropes={_ropeNodes.Count}");
+            }
+
+            // Movers (cubes) + over-the-shoulder camera aligned to the mover's aim (so reticle == grapple aim).
             var it = f.Filter<Mover>();
             while (it.Next(out EntityRef e, out Mover mover))
             {
@@ -65,15 +76,14 @@ namespace Quantum
                 Vector3 cubePos = t.Position.ToUnityVector3();
                 go.transform.position = cubePos;
 
-                // Third-person orbit camera around the cube, driven by look yaw + pitch (mouse up/down tilts the view).
                 if (_cam != null && key == 0)
                 {
                     float yaw = mover.Yaw.AsFloat;
                     float pitch = mover.Pitch.AsFloat;
-                    float cp = Mathf.Cos(pitch), sp = Mathf.Sin(pitch);
-                    Vector3 back = new Vector3(-Mathf.Sin(yaw), 0f, -Mathf.Cos(yaw));  // horizontal backward
-                    _cam.transform.position = cubePos + back * (cp * CamDistance) + Vector3.up * (sp * CamDistance + CamHeight);
-                    _cam.transform.LookAt(cubePos + Vector3.up * CamLookAtHeight);
+                    Vector3 aim   = new Vector3(Mathf.Cos(pitch) * Mathf.Sin(yaw), Mathf.Sin(pitch), Mathf.Cos(pitch) * Mathf.Cos(yaw));
+                    Vector3 right = new Vector3(Mathf.Cos(yaw), 0f, -Mathf.Sin(yaw));   // horizontal right
+                    _cam.transform.position = cubePos - aim * CamBack + Vector3.up * CamHeight + right * CamShoulder;
+                    _cam.transform.rotation = Quaternion.LookRotation(aim);             // look in aim dir => reticle == aim
                 }
             }
 
@@ -104,6 +114,18 @@ namespace Quantum
                     prev = np; havePrev = true;
                 }
             }
+        }
+
+        // Simple screen-center crosshair — marks where the grapple/aim lands.
+        void OnGUI()
+        {
+            if (!ShowReticle) return;
+            float cx = Screen.width * 0.5f, cy = Screen.height * 0.5f;
+            var prev = GUI.color;
+            GUI.color = ReticleColor;
+            GUI.DrawTexture(new Rect(cx - 1f, cy - ReticleHalf, 2f, ReticleHalf * 2f), Texture2D.whiteTexture); // vertical
+            GUI.DrawTexture(new Rect(cx - ReticleHalf, cy - 1f, ReticleHalf * 2f, 2f), Texture2D.whiteTexture);  // horizontal
+            GUI.color = prev;
         }
 
         static void ApplyColor(GameObject go, Color c)
@@ -151,10 +173,9 @@ namespace Quantum
             {
                 var c = Camera.main ?? new GameObject("SpikeCam") { tag = "MainCamera" }.AddComponent<Camera>();
                 _cam = c;
-                _cam.transform.position = new Vector3(0, RoomH * 0.6f, -RoomHW + 2f);
-                _cam.transform.LookAt(new Vector3(0, RoomH * 0.3f, 0));
                 _cam.backgroundColor = new Color(0.12f, 0.12f, 0.14f);
                 _cam.clearFlags = CameraClearFlags.SolidColor;
+                _cam.nearClipPlane = 0.1f;
             }
         }
 

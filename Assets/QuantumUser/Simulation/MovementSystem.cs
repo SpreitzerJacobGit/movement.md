@@ -17,7 +17,6 @@ namespace Quantum
         // Ground-probe tuning (placeholder constants; move to MovementConfig when tuning for real).
         static readonly FP GroundProbeSkin = (FP)1 / (FP)10;   // 0.1 — offset the origin off the floor so the ray hits
         static readonly FP GroundProbeDist = (FP)1 / (FP)2;    // 0.5 — how far below the feet to look for ground
-        static readonly FP GrapplePlayerMass = (FP)5;          // effective player mass for grapple coupling (tune)
 
         // Look direction from yaw/pitch (unit vector; matches the grapple aim direction).
         static FPVector3 AimDir(FP yaw, FP pitch)
@@ -96,7 +95,7 @@ namespace Quantum
 
                 // --- Grapple pull (last tick's solver) + gravity + integrate. ---
                 if (m->PlayerIndex >= 0 && m->PlayerIndex < 8)
-                    m->Velocity += grappleForce[m->PlayerIndex] * (dt / GrapplePlayerMass);
+                    m->Velocity += grappleForce[m->PlayerIndex] * (dt / cfg.GrapplePlayerMass);
                 m->Velocity.Y -= cfg.Gravity * dt;
                 t->Position += m->Velocity * dt;
 
