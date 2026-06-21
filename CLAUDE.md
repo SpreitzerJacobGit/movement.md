@@ -25,6 +25,11 @@ Check whether any file in `docs/` still contains a `TODO` placeholder. If so, th
 - **No speculative features.** Implement what is asked; don't add capabilities "just in case."
 - **No comments that explain what the code does** — good names do that. Comments are reserved for non-obvious *why*.
 - **Security first.** Never introduce command injection, XSS, SQL injection, or other OWASP Top 10 vulnerabilities. Fix any you notice, even if not in scope.
+- **Simulation/ is the source of truth.** All game logic lives in `src/Simulation/` (pure C#/.NET 8, no Unity/Quantum deps in the tree). See [`docs/AI_GUIDELINES.md`](./docs/AI_GUIDELINES.md).
+- **Presentation/ is read-only.** `src/Presentation/Scripts/` reads `SimulationState` and writes Unity transforms; it never writes sim state.
+- **Test first.** Write headless tests in `src/Simulation/Tests/` before touching `src/Simulation/` systems.
+- **Run tests frequently.** `dotnet test` in `src/Simulation/Tests/` takes seconds (the refactor's headline win over Unity Play Mode).
+- **Never mix concerns.** Sim code never references Unity; presentation code never writes to sim. The only seam is the `ISimulation` contract + `SimulationState` value types.
 
 ## Decision-making
 

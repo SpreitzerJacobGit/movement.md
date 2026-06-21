@@ -16,6 +16,7 @@ keep deterministic under rollback and is validated **before** anything else is b
 
 ## Project status
 
+- **Architecture: code-first split in progress (per REFACTOR_GUIDE.md).** `src/Simulation/` is a pure C#/.NET 8 headless layer (validated First-Test rope solver + 5-aspect xUnit tests, run via `dotnet test`); `src/Presentation/Scripts/` is a thin Unity renderer reading `SimulationState`. Quantum ECS systems stay at `Assets/QuantumUser/Simulation/` until the Photon Quantum SDK is restored into the tree.
 - **Engine: Path 1 — Unity 6000.3.17f1 + Photon Quantum 3.0.11. VALIDATED by the First Test
   (2026-06-17).** Determinism across runs, rollback re-simulation, and FP expressibility all
   passed in Quantum at 4 ropes / 128 Hz. See [`spike/determinism/FIRST_TEST.md`](../spike/determinism/FIRST_TEST.md)
@@ -51,6 +52,41 @@ All components are count-agnostic systems operating over an entity set of `N` mo
 | **Match flow** (`_Project/Core/Match`) | `MatchController` + `MatchState`: count-agnostic (per-side) first-to-11 / best-of-3 lifecycle with mid-game (at 6) and between-game edit windows. Core-only; UI subscribes to its events. |
 | **Macro / place-geometry** (`_Project/Core/Macro`, `_Project/UI/Macro`) | `MacroState` holds placed geometry (persists the whole match, resets per match); the place UI does free-3D mouse placement, one piece per side per edit window. Both sides' pieces are visible (perfect info). |
 | **Settings** (`_Project/UI/Settings`) | Display + Audio settings, persisted via PlayerPrefs. |
+
+## Code-first layout
+
+The refactor (per [`REFACTOR_GUIDE.md`](../REFACTOR_GUIDE.md)) splits the codebase into a pure-C# simulation layer and a Unity-only presentation layer. The solution file is [`movement.md.sln`](../movement.md.sln) at the repo root.
+
+### `src/Simulation/` — pure C#/.NET 8, zero Unity/Quantum deps in the tree
+
+Builds and tests without Unity or Photon Quantum installed. `dotnet build` / `dotnet test` from this folder.
+
+- **`Simulation.csproj`** — `net8.0`, `RootNamespace=Simulation`. Contains commented-out `<Reference>` entries for `Quantum.Deterministic.dll` / `Quantum.Engine.dll` that are uncommented only when the Photon Quantum SDK is restored into the tree (see "Current limitations" below).
+- **`Core/`** — the simulation contract and reference impl.
+  - `ISimulation.cs` — the pure-C# contract (`Tick` / `GetState` / `ApplyInput` / `Snapshot` / `Restore`) plus the render-readable value-type structs (`SimulationState`, `MoverState`, `RopeState`) handed to the presentation layer.
+  - `PlayerInputs.cs` — the per-tick input struct (`PlayerInputs`) and the spin-accumulator struct (`FPSpin`). Every field is fixed-point or bool so the struct serializes deterministically.
+  - `HeadlessSimulation.cs` — the pure-C# reference `ISimulation` implementation that composes the rope solver. This is the refactor's headline capability: the sim core runs outside any game engine. The Quantum-backed `Simulation` described in REFACTOR_GUIDE.md §1.2 will supersede it once the SDK is restored; both implement `ISimulation` so the presentation layer is agnostic to which one is live.
+- **`Math/`** — fixed-point math. `Fixed.cs` (Q32.32 with `Int128` intermediates) and `FixedVec3.cs`, ported from `spike/determinism/`. This is the validated First-Test stand-in for Quantum's `FP` (Q16.16) — same algorithm, different ship precision; see "Current limitations."
+- **`Systems/`** — simulation systems. `RopeSolver.cs` is the validated stiff coupled-spring rope-rope collision solver (ID-sorted pairs, frozen-position accumulator, semi-implicit Euler), ported bit-exact from the spike. Movement and Spin systems are pending (see below).
+- **`Networking/`** — reserved for input-only transport, remote-input prediction, and rollback reconciliation.
+- **`Tests/`** — `Tests.csproj` (xUnit). `Determinism/DeterminismTests.cs` is the 5-aspect First Test ported headless (run determinism, rollback re-sim, pair-order independence, fixed-point expressibility, frame budget). `Systems/SystemTests.cs` covers rope-solver invariants; Spin/Movement tests are skipped placeholders pending those systems. `Integration/` is reserved.
+
+### `src/Presentation/` — Unity-only renderer
+
+Compiles only inside the Unity editor (no `.csproj` here; Unity generates and compiles it). All scripts read `SimulationState` and write Unity transforms/materials/particles — **never** write simulation state.
+
+- **`Scripts/SimBridge/`** — `SimulationBridge`: the boundary that obtains an `ISimulation`, drives `Tick`, and exposes `SimulationState` to renderers.
+- **`Scripts/Input/`** — `InputCapture`: samples Unity input into `PlayerInputs` structs and forwards them to the sim via the bridge.
+- **`Scripts/Rendering/`** — `MoverRenderer`, `RopeRenderer`, `PerfectInfoRenderer`: read `SimulationState` and write Unity transforms / line renderers / the perfect-info overlay (position light, look cone, spin meter, playback tell).
+- **`Scripts/UI/`** — reserved for HUD / menus that subscribe to presentation-layer state.
+- **`Scenes/`**, **`Assets/`** — Unity scene and asset forwarding locations.
+
+### Current limitations (stated accurately)
+
+- **Photon Quantum SDK is NOT committed to this repo** (proprietary binaries). It exists at the canonical working copy `C:\Users\jacob\movement.md\Assets\Photon\Quantum\Assemblies\` (`Quantum.Deterministic.dll`, `Quantum.Engine.dll`, `Quantum.Log.dll`). `Simulation.csproj` has commented-out `<Reference>` entries that are filled in when the SDK is restored.
+- **Existing Quantum ECS systems** (`MovementSystem`, `GrappleSystem`, `RopeSolverSystem`, `RopeCouplingSystem`) remain at `Assets/QuantumUser/Simulation/` (Unity-side). They are Unity-independent in principle (only need Quantum, not Unity) but compile only inside Unity+Quantum for now. Moving them into `src/Simulation/` is deferred until the SDK is available (guide Phase 1.3 / 3.1).
+- **Spin and Offense systems do not exist yet** (design-only float proxies live in `Assets/_Project/Dev/Tunables.cs`). Tests for them in `src/Simulation/Tests/Systems/` are skipped placeholders.
+- **`Fixed` (Q32.32) is not bit-identical to Quantum's `FP` (Q16.16).** The spike's `Fixed` proves the *algorithm* is deterministic; Quantum's `FP` proves expressibility at ship precision. Both runs are documented in [`spike/determinism/FIRST_TEST.md`](../spike/determinism/FIRST_TEST.md).
 
 ## Key decisions
 
