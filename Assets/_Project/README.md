@@ -66,6 +66,7 @@ in `OnEnable`, so the menu is extensible — drop a new `IDevTool` in the Boot s
 | Determinism Test Runner | `ISimContext.RunDeterminismTest` | Stub — run the spike from `spike/determinism` until Quantum is wired |
 | Spawn / Clear Dummies | `ISimContext.SpawnDummy` | Stub |
 | Perfect-info Overlays | `OverlaySettings` | Flags **live**; rendering TBD |
+| Grapple Visual | `GrappleVisualSettings` | **Live** — color/glow/width-curve tweaks; "Show demo rig" spawns a mock until the sim is wired |
 | Input Record / Replay | `ISimContext.{Start,Stop}InputRecording` | Stub |
 | Match Scoring | `MatchController` | **Live** (manual) — award a point to a side / reset, to drive the match flow without a sim |
 

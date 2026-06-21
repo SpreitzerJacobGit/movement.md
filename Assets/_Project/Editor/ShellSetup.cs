@@ -39,6 +39,7 @@ namespace MovementMD.Editor
         private const string PanelPath = "Assets/_Project/Settings/UIPanelSettings.asset";
         private const string TunablesPath = "Assets/_Project/Dev/Tunables.asset";
         private const string PalettePath = "Assets/_Project/Dev/GeometryPalette.asset";
+        private const string GrappleVisualPath = "Assets/_Project/Presentation/GrappleVisualSettings.asset";
 
         [MenuItem(MenuRoot, priority = 0)]
         public static void Run()
@@ -50,6 +51,7 @@ namespace MovementMD.Editor
             var panel = GetOrCreateAsset<PanelSettings>(PanelPath);
             var tunables = GetOrCreateAsset<Tunables>(TunablesPath);
             var palette = GetOrCreateAsset<GeometryPalette>(PalettePath);
+            var grappleVisual = GetOrCreateAsset<GrappleVisualSettings>(GrappleVisualPath);
 
             // Force-import the new assets so their GUIDs are registered before the Boot scene
             // references them. Without this, the scene saves asset refs as null (fileID 0) — which
@@ -58,15 +60,17 @@ namespace MovementMD.Editor
             AssetDatabase.ImportAsset(PanelPath, ImportAssetOptions.ForceSynchronousImport);
             AssetDatabase.ImportAsset(TunablesPath, ImportAssetOptions.ForceSynchronousImport);
             AssetDatabase.ImportAsset(PalettePath, ImportAssetOptions.ForceSynchronousImport);
+            AssetDatabase.ImportAsset(GrappleVisualPath, ImportAssetOptions.ForceSynchronousImport);
             panel = AssetDatabase.LoadAssetAtPath<PanelSettings>(PanelPath);
             tunables = AssetDatabase.LoadAssetAtPath<Tunables>(TunablesPath);
             palette = AssetDatabase.LoadAssetAtPath<GeometryPalette>(PalettePath);
+            grappleVisual = AssetDatabase.LoadAssetAtPath<GrappleVisualSettings>(GrappleVisualPath);
             if (panel == null) Debug.LogError("[ShellSetup] PanelSettings failed to load after import — UIDocuments will render black.");
 
             CreatePlaceholderScene(MatchPath, new Color(0.18f, 0.20f, 0.24f), "Match (count-agnostic: 1v1 / 2v2)");
             CreatePlaceholderScene(SandboxPath, new Color(0.14f, 0.22f, 0.18f), "Sandbox");
             CreatePlaceholderScene(TrainingPath, new Color(0.22f, 0.18f, 0.14f), "Training");
-            CreateBootScene(panel, tunables, palette);
+            CreateBootScene(panel, tunables, palette, grappleVisual);
 
             EditorBuildSettings.scenes = new[]
             {
@@ -83,7 +87,7 @@ namespace MovementMD.Editor
 
         // ---- scenes -----------------------------------------------------------------------
 
-        private static void CreateBootScene(PanelSettings panel, Tunables tunables, GeometryPalette palette)
+        private static void CreateBootScene(PanelSettings panel, Tunables tunables, GeometryPalette palette, GrappleVisualSettings grappleVisual)
         {
             var scene = EditorSceneManager.NewScene(NewSceneSetup.EmptyScene, NewSceneMode.Single);
 
@@ -118,6 +122,7 @@ namespace MovementMD.Editor
             toolsGo.AddComponent<DeterminismTestRunnerTool>();
             toolsGo.AddComponent<SpawnDummyTool>();
             toolsGo.AddComponent<OverlayToggleTool>();
+            AssignSerialized(toolsGo.AddComponent<GrappleVisualTool>(), "settings", grappleVisual);
             toolsGo.AddComponent<InputRecordReplayTool>();
             toolsGo.AddComponent<MatchScoringTool>();
 
